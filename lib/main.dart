@@ -5,34 +5,40 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'app.dart';
 import 'firebase_options.dart';
+import 'core/twa_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  try {
-    debugPrint('Initializing Firebase...');
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-    debugPrint('Firebase Initialized.');
 
-    // Enable Firestore offline persistence (wrapped in try-catch for web compatibility)
+  // Initialize Telegram Web App as early as possible
+  // so the loading screen is correctly shown inside Telegram
+  try {
+    final twa = TWAService();
+    if (twa.isSupported) {
+      twa.ready();   // Tell Telegram the app is ready (hides loading spinner)
+      twa.expand();  // Request full-screen mode
+    }
+  } catch (e) {
+    debugPrint('TWA early init error: $e');
+  }
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+    // Enable Firestore offline persistence (web compatible)
     try {
-      debugPrint('Configuring Firestore...');
       FirebaseFirestore.instance.settings = const Settings(
         persistenceEnabled: true,
       );
-      debugPrint('Firestore Configured.');
     } catch (e) {
       debugPrint('Firestore Setting Error (Skipping): $e');
     }
 
-    debugPrint('Starting App...');
     runApp(const ProviderScope(child: App()));
-    debugPrint('runApp called.');
   } catch (e, stack) {
     debugPrint('CRITICAL APP START ERROR: $e');
     debugPrint('STACK TRACE: $stack');
-    
-    // Fallback UI in case of total failure
+
     runApp(MaterialApp(
       home: Scaffold(
         body: Center(
