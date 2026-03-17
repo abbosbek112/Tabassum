@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(uid())).data;
+    }
+    function isSeller() {
+      return signedIn() && userDoc().role == 'seller';
+    }
+    function shopDoc(shopId) {
+      return get(/databases/$(database)/documents/shops/$(shopId)).data;
+    }
+    function ownsShop(shopId) {
+      return isSeller() && shopDoc(shopId).ownerId == uid();
+    }
+    function subscriptionActive(shopId) {
+      return signedIn() &&
+        exists(/databases/$(database)/documents/subscriptions/$(shopId)) &&
+        get(/databases/$(database)/documents/subscriptions/$(shopId)).data.status == 'active' &&
+        get(/databases/$(database)/documents/subscriptions/$(shopId)).data.endDate > request.time;
+    }
+
+    // ─── Users ───────────────────────────────────────────────────────────────
+    // Fix #2: Prevent role and createdAt fields from being changed by the client.
+    function isAllowedProfileUpdate() {
+      let protectedKeys = ['role', 'createdAt', 'uid', 'email'];
+      let changedKeys = request.resource.data.diff(resource.data).affectedKeys();
+      return !changedKeys.hasAny(protectedKeys);
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && userId == uid();
+      allow create: if signedIn() && userId == uid();
+      allow update: if signedIn() && userId == uid() && isAllowedProfileUpdate();
+      allow delete: if false;
+    }
+
+    // ─── Shops ───────────────────────────────────────────────────────────────
+    match /shops/{shopId} {
+      allow read: if true;
+      allow create: if isSeller() && request.resource.data.ownerId == uid();
+      allow update: if isSeller() && resource.data.ownerId == uid();
+      allow delete: if false;
+    }
+
+    // ─── Products (Inventory) ────────────────────────────────────────────────
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if isSeller()
+        && ownsShop(request.resource.data.shopId)
+        && subscriptionActive(request.resource.data.shopId);
+      allow update: if isSeller()
+        && ownsShop(resource.data.shopId)
+        && subscriptionActive(resource.data.shopId);
+      allow delete: if isSeller() && ownsShop(resource.data.shopId);
+    }
+
+    // ─── Categories ──────────────────────────────────────────────────────────
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ─── Wishlist ────────────────────────────────────────────────────────────
+    match /wishlist/{wishlistId} {
+      allow read: if signedIn() && resource.data.userId == uid();
+      allow create: if signedIn() && request.resource.data.userId == uid();
+      allow delete: if signedIn() && resource.data.userId == uid();
+      allow update: if false;
+    }
+
+    // ─── Sales ───────────────────────────────────────────────────────────────
+    match /sales/{saleId} {
+      allow read: if signedIn() && ownsShop(resource.data.shopId);
+      allow create: if signedIn()
+        && ownsShop(request.resource.data.shopId)
+        && subscriptionActive(request.resource.data.shopId);
+      allow update, delete: if false;
+    }
+
+    // ─── Subscriptions ───────────────────────────────────────────────────────
+    // Fix #1: Subscriptions are READ-ONLY from the client.
+    // They must ONLY be written by a trusted Cloud Function (admin SDK).
+    match /subscriptions/{shopId} {
+      allow read: if signedIn() && ownsShop(shopId);
+      allow write: if false; // Server-side only via Cloud Functions / Admin SDK
+    }
+
+    // ─── Payments ────────────────────────────────────────────────────────────
+    match /payments/{paymentId} {
+      allow read: if signedIn() && ownsShop(resource.data.shopId);
+      allow create: if signedIn() && ownsShop(request.resource.data.shopId);
+      allow update, delete: if false;
+    }
+  }
+}
