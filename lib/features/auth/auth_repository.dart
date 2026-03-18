@@ -1,12 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 import '../../core/constants.dart';
 import '../../core/providers.dart';
 import 'models/user_model.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// ─── Bot backend URL ──────────────────────────────────────────────────────
+// NOTE: Replace this with your actual Render URL
+const _botBaseUrl = 'https://tabassum-bot.onrender.com';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
@@ -23,82 +27,48 @@ class AuthRepository {
 
   Stream<User?> authStateChanges() => auth.authStateChanges();
 
-  Future<UserCredential> signIn({
-    required String email,
-    required String password,
-  }) {
-    return auth.signInWithEmailAndPassword(email: email, password: password);
+  /// Step 1: Send OTP via Telegram bot
+  Future<void> sendOtp({required String telegramId}) async {
+    final response = await http.post(
+      Uri.parse('$_botBaseUrl/send-code'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'telegramId': telegramId}),
+    );
+
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Kod yuborishda xatolik yuz berdi');
+    }
   }
 
-  Future<UserCredential> signUp({
-    required String email,
-    required String password,
-    required UserRole role,
-    String phoneNumber = '',
+  /// Step 2: Verify OTP and sign in with Firebase Custom Token
+  Future<void> verifyOtp({
+    required String telegramId,
+    required String code,
+    required String name,
+    String surname = '',
+    required int age,
   }) async {
-    final cred = await auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
+    final response = await http.post(
+      Uri.parse('$_botBaseUrl/verify-code'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'telegramId': telegramId,
+        'code': code,
+        'name': name,
+        'surname': surname,
+        'age': age,
+      }),
     );
 
-    final uid = cred.user!.uid;
-    final userDoc = db.collection(FirestoreCollections.users).doc(uid);
-    final model = UserModel(
-      uid: uid,
-      email: email,
-      role: role,
-      phoneNumber: phoneNumber,
-      createdAt: DateTime.now(),
-    );
-    await userDoc.set(model.toMap(), SetOptions(merge: true));
-
-    return cred;
-  }
-  
-  Future<UserCredential?> signInWithGoogle() async {
-    late final UserCredential cred;
-
-    if (kIsWeb) {
-      // Web: use Firebase's built-in popup flow (no idToken issue)
-      final provider = GoogleAuthProvider()
-        ..addScope('email')
-        ..addScope('profile');
-      cred = await auth.signInWithPopup(provider);
-    } else {
-      // Mobile: use google_sign_in package
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return null;
-
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      cred = await auth.signInWithCredential(credential);
+    final data = jsonDecode(response.body);
+    if (response.statusCode != 200 || data['success'] != true) {
+      throw Exception(data['error'] ?? 'Tasdiqlashda xatolik yuz berdi');
     }
 
-    final user = cred.user;
-    if (user != null) {
-      // Create profile if it doesn't exist
-      final userDoc = db.collection(FirestoreCollections.users).doc(user.uid);
-      final snap = await userDoc.get();
-      if (!snap.exists) {
-        final model = UserModel(
-          uid: user.uid,
-          email: user.email ?? '',
-          displayName: user.displayName ?? '',
-          role: UserRole.customer,
-          createdAt: DateTime.now(),
-        );
-        await userDoc.set(model.toMap());
-      }
-    }
-
-    return cred;
-  }
-  
-  Future<void> sendPasswordResetEmail(String email) async {
-    await auth.sendPasswordResetEmail(email: email.trim());
+    // Sign in with the Firebase Custom Token
+    final token = data['token'] as String;
+    await auth.signInWithCustomToken(token);
   }
 
   Future<void> signOut() => auth.signOut();
@@ -128,8 +98,6 @@ class AuthRepository {
     String? phoneNumber,
     String? address,
   }) async {
-    // Fix #4: Whitelist — only these 3 fields are ever sent to Firestore.
-    // This prevents accidental (or malicious) updates to role, email, createdAt.
     final Map<String, dynamic> data = {};
     if (displayName != null && displayName.isNotEmpty) data['displayName'] = displayName;
     if (phoneNumber != null && phoneNumber.isNotEmpty)  data['phoneNumber'] = phoneNumber;
@@ -144,4 +112,3 @@ class AuthRepository {
     await db.collection(FirestoreCollections.users).doc(uid).update({'role': role.asString});
   }
 }
-

@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/providers.dart';
@@ -65,7 +65,6 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   StreamSubscription? _profileSub;
 
   _RouterRefreshNotifier(this.ref) {
-    // We use read() for the initial setup in the constructor, then listen() for changes.
     final auth = ref.read(firebaseAuthProvider);
     _authSub = auth.authStateChanges().listen((user) {
       notifyListeners();
@@ -98,44 +97,31 @@ class AuthController extends AsyncNotifier<void> {
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
-  Future<void> signIn({required String email, required String password}) async {
+  Future<void> sendOtp({required String telegramId}) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _repo.signIn(email: email.trim(), password: password);
+      await _repo.sendOtp(telegramId: telegramId);
     });
   }
 
-  Future<void> signUp({
-    required String email,
-    required String password,
-    required UserRole role,
-    String phoneNumber = '',
+  Future<void> verifyOtp({
+    required String telegramId,
+    required String code,
+    required String name,
+    String surname = '',
+    required int age,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _repo.signUp(
-        email: email.trim(),
-        password: password,
-        role: role,
-        phoneNumber: phoneNumber,
+      await _repo.verifyOtp(
+        telegramId: telegramId,
+        code: code,
+        name: name,
+        surname: surname,
+        age: age,
       );
     });
   }
-
-  Future<void> signInWithGoogle() async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await _repo.signInWithGoogle();
-    });
-  }
-
-  Future<void> sendPasswordResetEmail(String email) async {
-    state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
-      await _repo.sendPasswordResetEmail(email);
-    });
-  }
-
 
   Future<void> signOut() async {
     state = const AsyncLoading();
@@ -178,4 +164,3 @@ class AuthController extends AsyncNotifier<void> {
     }
   }
 }
-
