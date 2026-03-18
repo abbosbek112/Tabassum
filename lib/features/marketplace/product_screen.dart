@@ -490,12 +490,20 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
           ),
           child: ListTile(
             leading: CircleAvatar(backgroundColor: Theme.of(context).colorScheme.primary, child: const Icon(Icons.telegram, color: Colors.white, size: 20)),
-            title: Text('@$telegram', style: const TextStyle(fontWeight: FontWeight.w700)),
+            title: Text(
+              telegram.startsWith('http') ? telegram.split('/').last : '@$telegram', 
+              style: const TextStyle(fontWeight: FontWeight.w700)
+            ),
             subtitle: Text(context.l('contact_tg') ?? 'Contact', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
             onTap: () async {
-              final uri = Uri.parse('https://t.me/$telegram');
-              if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              String handle = telegram.replaceAll('https://t.me/', '').replaceAll('t.me/', '').replaceAll('@', '');
+              final message = Uri.encodeComponent('Assalomu alaykum! Men Tabassum ilovasida ko\'rgan mana bu mahsulotingizga qiziqib qoldim: ${widget.inventory.name}\n\nHavola: https://tabssum.app/marketplace/product/${widget.inventory.id}');
+              final uri = Uri.parse('https://t.me/$handle?text=$message');
+              
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri, mode: LaunchMode.externalApplication);
+              }
             },
           ),
         ),
@@ -554,13 +562,21 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
                     );
                     return;
                   }
-                  final uri = Uri.parse('https://t.me/$telegram');
+                  
+                  // Robust handle parsing
+                  String handle = telegram.replaceAll('https://t.me/', '').replaceAll('t.me/', '').replaceAll('@', '');
+                  
+                  // Pre-filled message for better UX
+                  final message = Uri.encodeComponent('Assalomu alaykum! Tabassum ilovasidan qiziqib bog\'lanyapman.\n\nMahsulot: ${widget.inventory.name}\nNarxi: ${price} sum\nHavola: https://tabssum.app/marketplace/product/${widget.inventory.id}');
+                  
+                  final uri = Uri.parse('https://t.me/$handle?text=$message');
+                  
                   if (await canLaunchUrl(uri)) {
                     await launchUrl(uri, mode: LaunchMode.externalApplication);
                   } else {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Could not launch Telegram: @$telegram')),
+                        SnackBar(content: Text('Could not launch Telegram: @$handle')),
                       );
                     }
                   }
