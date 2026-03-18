@@ -545,53 +545,6 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
                 ),
               ],
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF0088CC), // Telegram Blue
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-                icon: const Icon(Icons.telegram, size: 24),
-                onPressed: () async {
-                  if (telegram.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(context.l('no_products_found') ?? 'Sotuvchi bilan bog\'lanish imkoniyati yo\'q')),
-                    );
-                    return;
-                  }
-                  
-                  // Robust handle parsing
-                  String handle = telegram.replaceAll('https://t.me/', '').replaceAll('t.me/', '').replaceAll('@', '');
-                  
-                  // Pre-filled message for better UX
-                  final message = Uri.encodeComponent('Assalomu alaykum! Tabassum ilovasidan qiziqib bog\'lanyapman.\n\nMahsulot: ${widget.inventory.name}\nNarxi: ${price} sum\nHavola: https://tabssum.app/marketplace/product/${widget.inventory.id}');
-                  
-                  final uri = Uri.parse('https://t.me/$handle?text=$message');
-                  
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Could not launch Telegram: @$handle')),
-                      );
-                    }
-                  }
-                },
-                label: Text(
-                  (context.l('contact_tg') ?? 'Telegram orqali bog\'lanish').toUpperCase(), 
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800, 
-                    letterSpacing: 1,
-                    fontSize: MediaQuery.sizeOf(context).width < 340 ? 11 : 13,
-                  )
-                ),
-              ),
-            ),
           ],
         ),
       ),
