@@ -12,6 +12,7 @@ import '../../core/constants.dart';
 import '../../core/shared_providers.dart';
 import '../../shared/models/shop_model.dart';
 import '../marketplace/shop_repository.dart';
+import '../../core/twa_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/providers.dart';
 
@@ -370,6 +371,85 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
             ],
           ),
         ),
+
+        if (ref.watch(twaServiceProvider).isSupported) ...[
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: Material(
+              color: const Color(0xFF0088CC).withOpacity(0.08),
+              borderRadius: BorderRadius.circular(24),
+              child: InkWell(
+                onTap: () {
+                  ref.read(twaServiceProvider).hapticImpact('medium');
+                  ref.read(twaServiceProvider).requestPhone((number) async {
+                    if (number != null && number.isNotEmpty) {
+                      try {
+                        await ref.read(authControllerProvider.notifier).updateProfile(
+                          phoneNumber: number,
+                        );
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(context.l('profile_updated') ?? 'Telefon raqami yangilandi!'), 
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                         if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Xato: $e'), backgroundColor: Colors.red),
+                          );
+                        }
+                      }
+                    }
+                  });
+                },
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF0088CC).withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.telegram, color: Color(0xFF0088CC), size: 28),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (context.l('contact_tg') ?? 'Telegram raqamni ulash').toUpperCase(),
+                              style: const TextStyle(
+                                color: Color(0xFF0088CC),
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                fontSize: 13,
+                              ),
+                            ),
+                            Text(
+                              'Bir tegish orqali raqamingizni tasdiqlang',
+                              style: TextStyle(
+                                color: const Color(0xFF0088CC).withOpacity(0.6),
+                                fontWeight: FontWeight.w600,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF0088CC), size: 14),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
 
         const SizedBox(height: 32),
         // Sign Out Button

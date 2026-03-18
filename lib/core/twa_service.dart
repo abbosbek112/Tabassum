@@ -24,9 +24,10 @@ extension type WebApp(JSObject _) implements JSObject {
   external BackButton get backButton;
   
   @JS('HapticFeedback')
-  external HapticFeedback get hapticFeedback;
+  external TWAHapticFeedback get hapticFeedback;
 
   external void onEvent(String eventName, JSFunction callback);
+  external void requestContact(JSFunction callback);
 }
 
 extension type MainButton(JSObject _) implements JSObject {
@@ -44,8 +45,30 @@ extension type BackButton(JSObject _) implements JSObject {
   external void onClick(JSFunction callback);
 }
 
-extension type HapticFeedback(JSObject _) implements JSObject {
+extension type TWAHapticFeedback(JSObject _) implements JSObject {
   external void impactOccurred(String style);
+}
+
+extension type ContactResponse(JSObject _) implements JSObject {
+  @JS('status')
+  external String get status;
+  
+  @JS('contact')
+  external Contact? get contact;
+}
+
+extension type Contact(JSObject _) implements JSObject {
+  @JS('phone_number')
+  external String get phoneNumber;
+  
+  @JS('first_name')
+  external String get firstName;
+  
+  @JS('last_name')
+  external String? get lastName;
+  
+  @JS('user_id')
+  external int? get userId;
 }
 
 final twaServiceProvider = ChangeNotifierProvider((ref) => TWAService());
@@ -166,6 +189,31 @@ class TWAService extends ChangeNotifier {
       return _webApp?.colorScheme == 'dark';
     } catch (_) {
       return false;
+    }
+  }
+
+  void requestPhone(void Function(String? phoneNumber) onResult) {
+    if (!isSupported) {
+      onResult(null);
+      return;
+    }
+    try {
+      _webApp?.requestContact(((JSObject result) {
+        try {
+          final resp = result as ContactResponse;
+          if (resp.status == 'sent' && resp.contact != null) {
+            onResult(resp.contact!.phoneNumber);
+          } else {
+            onResult(null);
+          }
+        } catch (e) {
+          debugPrint('TWA Contact Callback Parse Error: $e');
+          onResult(null);
+        }
+      }).toJS);
+    } catch (e) {
+      debugPrint('TWA RequestPhone Error: $e');
+      onResult(null);
     }
   }
 }
