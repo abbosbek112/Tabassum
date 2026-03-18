@@ -109,10 +109,16 @@ class AuthController extends AsyncNotifier<void> {
     required String email,
     required String password,
     required UserRole role,
+    String phoneNumber = '',
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _repo.signUp(email: email.trim(), password: password, role: role);
+      await _repo.signUp(
+        email: email.trim(),
+        password: password,
+        role: role,
+        phoneNumber: phoneNumber,
+      );
     });
   }
 

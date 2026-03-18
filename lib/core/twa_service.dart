@@ -26,8 +26,30 @@ extension type WebApp(JSObject _) implements JSObject {
   @JS('HapticFeedback')
   external TWAHapticFeedback get hapticFeedback;
 
+  @JS('initDataUnsafe')
+  external WebAppInitData get initDataUnsafe;
+
   external void onEvent(String eventName, JSFunction callback);
   external void requestContact(JSFunction callback);
+}
+
+extension type WebAppInitData(JSObject _) implements JSObject {
+  @JS('user')
+  external WebAppUser? get user;
+}
+
+extension type WebAppUser(JSObject _) implements JSObject {
+  @JS('id')
+  external int get id;
+  
+  @JS('first_name')
+  external String get firstName;
+  
+  @JS('last_name')
+  external String? get lastName;
+  
+  @JS('username')
+  external String? get username;
 }
 
 extension type MainButton(JSObject _) implements JSObject {
@@ -189,6 +211,26 @@ class TWAService extends ChangeNotifier {
       return _webApp?.colorScheme == 'dark';
     } catch (_) {
       return false;
+    }
+  }
+
+  int? get telegramUserId {
+    try {
+      if (!isSupported) return null;
+      return _webApp?.initDataUnsafe.user?.id;
+    } catch (e) {
+      debugPrint('TWA Get TelegramUserId Error: $e');
+      return null;
+    }
+  }
+
+  WebAppUser? get telegramUser {
+    try {
+      if (!isSupported) return null;
+      return _webApp?.initDataUnsafe.user;
+    } catch (e) {
+      debugPrint('TWA Get TelegramUser Error: $e');
+      return null;
     }
   }
 

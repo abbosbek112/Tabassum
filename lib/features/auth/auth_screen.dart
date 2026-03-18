@@ -6,6 +6,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/localization.dart';
 import '../../core/constants.dart';
+import '../../core/twa_service.dart';
+import '../../core/providers.dart';
 import 'auth_controller.dart';
 
 class AuthScreen extends ConsumerStatefulWidget {
@@ -26,6 +28,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
   final _loginPassCtrl = TextEditingController();
   final _signUpEmailCtrl = TextEditingController();
   final _signUpPassCtrl = TextEditingController();
+  final _signUpPhoneCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -34,6 +37,14 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _tabs.addListener(() {
       if (_tabs.indexIsChanging) return;
       setState(() => _isLogin = _tabs.index == 0);
+      if (!_isLogin) {
+        _checkTelegramLinkedPhone();
+      }
+    });
+    
+    // Initial check if starts on signup or just generally
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkTelegramLinkedPhone();
     });
   }
 
@@ -44,6 +55,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     _loginPassCtrl.dispose();
     _signUpEmailCtrl.dispose();
     _signUpPassCtrl.dispose();
+    _signUpPhoneCtrl.dispose();
     super.dispose();
   }
 
@@ -427,7 +439,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
               controller: _tabs,
               children: [
                 _buildLoginForm(isBusy, isCompact),
-                _buildSignUpForm(isBusy, isCompact),
+                SingleChildScrollView(child: _buildSignUpForm(isBusy, isCompact)),
               ],
             ),
           ),
@@ -544,7 +556,16 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
           isBusy: isBusy,
           isCompact: isCompact,
         ),
-        SizedBox(height: isCompact ? 12 : 16),
+        SizedBox(height: isCompact ? 10 : 12),
+        _buildField(
+          controller: _signUpPhoneCtrl,
+          label: context.l('phone_number'),
+          icon: Icons.phone_android_rounded,
+          keyboardType: TextInputType.phone,
+          isBusy: isBusy,
+          isCompact: isCompact,
+        ),
+        SizedBox(height: isCompact ? 10 : 12),
         _buildField(
           controller: _signUpPassCtrl,
           label: context.l('password'),
@@ -557,6 +578,44 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
         ),
       ],
     );
+  }
+
+  void _checkTelegramLinkedPhone() async {
+    final twa = ref.read(twaServiceProvider);
+    if (!twa.isSupported) return;
+
+    final telegramId = twa.telegramUserId?.toString();
+    if (telegramId == null) return;
+
+    if (_signUpPhoneCtrl.text.isNotEmpty) return;
+
+    try {
+      final db = ref.read(firestoreProvider);
+      final doc = await db.collection('telegram_users').doc(telegramId).get();
+      
+      if (doc.exists && doc.data() != null) {
+        final phone = doc.data()!['phone'] as String?;
+        if (phone != null && phone.isNotEmpty) {
+          setState(() {
+            _signUpPhoneCtrl.text = phone;
+          });
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Telegram orqali telefon raqamingiz aniqlandi! ✨'),
+                backgroundColor: _accent,
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(seconds: 4),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error checking telegram linked phone: $e');
+    }
   }
 
   // ─── Text Field ─────────────────────────────────────────
@@ -740,6 +799,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
       await ref.read(authControllerProvider.notifier).signUp(
             email: email,
             password: pass,
+            phoneNumber: _signUpPhoneCtrl.text.trim(),
             role: UserRole.customer,
           );
     }
@@ -755,6 +815,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen>
     }
     if (trimmedPass.length < 6) {
       _showSnack(context.l('password_min_length'));
+      return false;
+    }
+    if (!_isLogin && _signUpPhoneCtrl.text.trim().isEmpty) {
+      _showSnack(context.l('phone_number_required') ?? 'Telefon raqamingizni kiriting');
       return false;
     }
     return true;

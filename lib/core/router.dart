@@ -30,6 +30,11 @@ final goRouterProvider = Provider<GoRouter>((ref) {
     initialLocation: '/market',
     refreshListenable: notifier,
     redirect: (context, state) {
+      // TWA Fix: Telegram appends #tgWebAppData=... which GoRouter might try to parse as a path.
+      if (state.uri.toString().contains('tgWebAppData')) {
+        return '/market';
+      }
+
       final isLoggingIn = state.matchedLocation == '/auth';
 
       if (!authState.isAuthenticated) {

@@ -34,6 +34,7 @@ class AuthRepository {
     required String email,
     required String password,
     required UserRole role,
+    String phoneNumber = '',
   }) async {
     final cred = await auth.createUserWithEmailAndPassword(
       email: email,
@@ -46,6 +47,7 @@ class AuthRepository {
       uid: uid,
       email: email,
       role: role,
+      phoneNumber: phoneNumber,
       createdAt: DateTime.now(),
     );
     await userDoc.set(model.toMap(), SetOptions(merge: true));
