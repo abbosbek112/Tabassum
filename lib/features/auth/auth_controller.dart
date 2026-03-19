@@ -97,25 +97,25 @@ class AuthController extends AsyncNotifier<void> {
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
-  Future<void> sendOtp({required String telegramId}) async {
+  Future<bool> telegramLogin({required String telegramId}) async {
     state = const AsyncLoading();
+    bool needsRegistration = false;
     state = await AsyncValue.guard(() async {
-      await _repo.sendOtp(telegramId: telegramId);
+      needsRegistration = await _repo.telegramLogin(telegramId: telegramId);
     });
+    return needsRegistration;
   }
 
-  Future<void> verifyOtp({
+  Future<void> telegramRegister({
     required String telegramId,
-    required String code,
     required String name,
     String surname = '',
     required int age,
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await _repo.verifyOtp(
+      await _repo.telegramRegister(
         telegramId: telegramId,
-        code: code,
         name: name,
         surname: surname,
         age: age,

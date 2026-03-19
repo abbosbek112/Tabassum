@@ -27,34 +27,41 @@ class AuthRepository {
 
   Stream<User?> authStateChanges() => auth.authStateChanges();
 
-  /// Step 1: Send OTP via Telegram bot
-  Future<void> sendOtp({required String telegramId}) async {
+  /// Step 1: Check if user exists and login directly
+  Future<bool> telegramLogin({required String telegramId}) async {
     final response = await http.post(
-      Uri.parse('$_botBaseUrl/send-code'),
+      Uri.parse('$_botBaseUrl/telegram-login'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'telegramId': telegramId}),
     );
 
     final data = jsonDecode(response.body);
     if (response.statusCode != 200 || data['success'] != true) {
-      throw Exception(data['error'] ?? 'Kod yuborishda xatolik yuz berdi');
+      throw Exception(data['error'] ?? 'Login xatolik yuz berdi');
     }
+
+    if (data['needs_registration'] == true) {
+      return true; // Needs registration
+    }
+
+    // Sign in with the Firebase Custom Token
+    final token = data['token'] as String;
+    await auth.signInWithCustomToken(token);
+    return false; // Did not need registration, logged in successfully
   }
 
-  /// Step 2: Verify OTP and sign in with Firebase Custom Token
-  Future<void> verifyOtp({
+  /// Step 2: If user doesn't exist, register with extra fields
+  Future<void> telegramRegister({
     required String telegramId,
-    required String code,
     required String name,
     String surname = '',
     required int age,
   }) async {
     final response = await http.post(
-      Uri.parse('$_botBaseUrl/verify-code'),
+      Uri.parse('$_botBaseUrl/telegram-register'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'telegramId': telegramId,
-        'code': code,
         'name': name,
         'surname': surname,
         'age': age,
@@ -63,7 +70,7 @@ class AuthRepository {
 
     final data = jsonDecode(response.body);
     if (response.statusCode != 200 || data['success'] != true) {
-      throw Exception(data['error'] ?? 'Tasdiqlashda xatolik yuz berdi');
+      throw Exception(data['error'] ?? 'Ro\'yxatdan o\'tishda xatolik yuz berdi');
     }
 
     // Sign in with the Firebase Custom Token
