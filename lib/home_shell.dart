@@ -63,9 +63,8 @@ class HomeShell extends ConsumerWidget {
         children: [
           if (isDesktop)
             _DesktopSideBar(
-              destinations: destinations,
-              selectedIndex: selectedIndex,
-              onTap: (path) => context.go(path),
+              activeIndex: selectedIndex,
+              onIndexChanged: (i) => context.go(destinations[i].path),
             ),
           Expanded(
             child: Center(
@@ -122,110 +121,173 @@ class HomeShell extends ConsumerWidget {
 }
 
 class _DesktopSideBar extends StatelessWidget {
-  final List<_NavDest> destinations;
-  final int selectedIndex;
-  final void Function(String path) onTap;
+  final int activeIndex;
+  final Function(int) onIndexChanged;
 
   const _DesktopSideBar({
-    required this.destinations,
-    required this.selectedIndex,
-    required this.onTap,
+    required this.activeIndex,
+    required this.onIndexChanged,
   });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+    final surface = isDark ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
+    final borderColor = Theme.of(context).dividerColor.withOpacity(isDark ? 0.08 : 0.05);
+
     return Container(
       width: 280,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF0F172A) : Colors.white,
-        border: Border(
-          right: BorderSide(
-            color: Theme.of(context).dividerColor.withOpacity(0.1),
-            width: 1,
-          ),
-        ),
+        color: surface,
+        border: Border(right: BorderSide(color: borderColor, width: 1)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 40),
-          // Logo or App Name
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
+            padding: const EdgeInsets.fromLTRB(32, 48, 24, 40),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  width: 40,
+                  height: 40,
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 24),
+                  child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 const Text(
                   'TABASSUM',
                   style: TextStyle(
-                    fontWeight: FontWeight.w900,
                     fontSize: 20,
-                    letterSpacing: -1.0,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 48),
-          Expanded(
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: destinations.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 4),
-              itemBuilder: (context, index) {
-                final d = destinations[index];
-                final isSelected = selectedIndex == index;
-                
-                return InkWell(
-                  onTap: () => onTap(d.path),
-                  borderRadius: BorderRadius.circular(16),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: isSelected 
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
-                        : Colors.transparent,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          d.icon,
-                          size: 24,
-                          color: isSelected 
-                            ? Theme.of(context).colorScheme.primary 
-                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                        ),
-                        const SizedBox(width: 16),
-                        Text(
-                          d.label,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
-                            color: isSelected 
-                              ? Theme.of(context).colorScheme.primary 
-                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+          const SizedBox(height: 8),
+          _SidebarItem(
+            icon: Icons.storefront_rounded,
+            label: context.l('market') ?? 'Market',
+            isActive: activeIndex == 0,
+            onTap: () => onIndexChanged(0),
+          ),
+          _SidebarItem(
+            icon: Icons.inventory_2_rounded,
+            label: context.l('products') ?? 'Mahsulotlar',
+            isActive: activeIndex == 1,
+            onTap: () => onIndexChanged(1),
+          ),
+          _SidebarItem(
+            icon: Icons.category_rounded,
+            label: context.l('categories') ?? 'Kategoriyalar',
+            isActive: activeIndex == 2,
+            onTap: () => onIndexChanged(2),
+          ),
+          _SidebarItem(
+            icon: Icons.person_rounded,
+            label: context.l('profile') ?? 'Mening profilim',
+            isActive: activeIndex == 3,
+            onTap: () => onIndexChanged(3),
+          ),
+          const Spacer(),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              '@tabassum_market_bot',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                letterSpacing: 0.5,
+              ),
             ),
           ),
-          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+}
+
+class _SidebarItem extends StatefulWidget {
+  final IconData icon;
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SidebarItem({
+    required this.icon,
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarItem> createState() => _SidebarItemState();
+}
+
+class _SidebarItemState extends State<_SidebarItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: widget.onTap,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: widget.isActive 
+                ? colorScheme.primary.withOpacity(0.08)
+                : (_isHovered ? colorScheme.onSurface.withOpacity(0.04) : Colors.transparent),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  widget.icon,
+                  size: 24,
+                  color: widget.isActive 
+                    ? colorScheme.primary 
+                    : colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ),
+                const SizedBox(width: 16),
+                Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: widget.isActive ? FontWeight.w700 : FontWeight.w500,
+                    color: widget.isActive 
+                      ? colorScheme.primary 
+                      : colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (widget.isActive) ...[
+                  const Spacer(),
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -25,12 +25,14 @@ class AllProductsScreen extends ConsumerStatefulWidget {
 }
 
 class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
+  final TextEditingController _searchCtrl = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final _debouncer = Debouncer(milliseconds: 500);
   String _searchQuery = '';
   String? _selectedCategory;
-  String? _selectedGender;
   ProductSort _sort = ProductSort.newest;
+  String? _selectedGender;
+  final Set<String> _orphanIds = {};
 
   @override
   void initState() {
@@ -158,10 +160,11 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
               builder: (context, ref, child) {
                 final state = ref.watch(paginatedInventoryProvider(_selectedCategory));
                 final items = state.items;
-
+                
                 var filtered = items
-                    .where((i) => i.subscriptionActive) // obunasiz seller ko'rinmaydi
+                    .where((i) => i.subscriptionActive)
                     .where((i) => i.name.toLowerCase().contains(_searchQuery))
+                    .where((i) => !_orphanIds.contains(i.id))
                     .toList();
 
                 if (_selectedGender != null) {
@@ -171,7 +174,7 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                       .toList();
                 }
 
-                // Sorting (Local for now to avoid indexing complexity)
+                // Sorting
                 switch (_sort) {
                   case ProductSort.newest:
                     filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -213,7 +216,16 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                         ),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
-                          return _ProductCard(item: filtered[index]);
+                          return _ProductCard(
+                            item: filtered[index],
+                            onOrphan: (id) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted && !_orphanIds.contains(id)) {
+                                  setState(() => _orphanIds.add(id));
+                                }
+                              });
+                            },
+                          );
                         },
                       ),
                       if (state.isLoading)
@@ -310,18 +322,18 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
               const SizedBox(height: 12),
               Row(
                 children: [
-                  _filterChip(context, 'both', context.l('both_genders'), _selectedGender == null, (val) {
-                    setState(() { _selectedGender = null; });
+                  _filterChip(context, 'both', context.l('both_genders') ?? 'BOTH', _selectedGender == null, (val) {
+                    setState(() => _selectedGender = null);
                     setModalState(() {});
                   }),
                   const SizedBox(width: 8),
-                  _filterChip(context, 'male', context.l('male_gender'), _selectedGender == 'male', (val) {
-                    setState(() { _selectedGender = 'male'; });
+                  _filterChip(context, 'male', context.l('male') ?? 'MALE', _selectedGender == 'male', (val) {
+                    setState(() => _selectedGender = 'male');
                     setModalState(() {});
                   }),
                   const SizedBox(width: 8),
-                  _filterChip(context, 'female', context.l('female_gender'), _selectedGender == 'female', (val) {
-                    setState(() { _selectedGender = 'female'; });
+                  _filterChip(context, 'female', context.l('female') ?? 'FEMALE', _selectedGender == 'female', (val) {
+                    setState(() => _selectedGender = 'female');
                     setModalState(() {});
                   }),
                 ],
@@ -376,7 +388,8 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
 
 class _ProductCard extends ConsumerStatefulWidget {
   final InventoryModel item;
-  const _ProductCard({required this.item});
+  final Function(String) onOrphan;
+  const _ProductCard({required this.item, required this.onOrphan});
 
   @override
   ConsumerState<_ProductCard> createState() => _ProductCardState();
@@ -395,7 +408,10 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
 
     return shopAsync.when(
       data: (shop) {
-        if (shop == null) return const SizedBox.shrink();
+        if (shop == null) {
+          widget.onOrphan(item.id);
+          return const SizedBox.shrink();
+        }
         
         return InkWell(
           onTap: () => context.push('/market/product/${item.id}'),

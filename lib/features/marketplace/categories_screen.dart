@@ -32,13 +32,51 @@ class CategoriesScreen extends ConsumerWidget {
         slivers: [
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: context.l('search_categories') ?? 'Kategoriyalarni qidirish...',
-                  prefixIcon: Icon(
-                    Icons.search_rounded,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  decoration: InputDecoration(
+                    hintText: context.l('search_categories') ?? 'Kategoriyalarni qidirish...',
+                    hintStyle: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                      fontSize: 15,
+                    ),
+                    prefixIcon: Icon(
+                      Icons.search_rounded,
+                      size: 22,
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.7),
+                    ),
+                    filled: true,
+                    fillColor: Theme.of(context).colorScheme.surface,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.1 : 0.05),
+                        width: 1,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        width: 1.5,
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -151,24 +189,61 @@ class CategoriesScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  IconData _getIconForCategory(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('men') && !lower.contains('women')) return Icons.man_rounded;
-    if (lower.contains('women')) return Icons.woman_rounded;
-    if (lower.contains('shoe')) return Icons.snowshoeing_rounded;
-    if (lower.contains('access')) return Icons.watch_outlined;
-    if (lower.contains('kid')) return Icons.child_care_rounded;
-    if (lower.contains('electron')) return Icons.devices_rounded;
-    if (lower.contains('home')) return Icons.chair_rounded;
-    if (lower.contains('beauty')) return Icons.face_retouching_natural_rounded;
-    if (lower.contains('toy')) return Icons.toys_rounded;
-    if (lower.contains('perfum')) return Icons.auto_fix_high_rounded;
-    if (lower.contains('auto') || lower.contains('spare') || lower.contains('car')) return Icons.settings_input_component_rounded;
-    if (lower.contains('tool')) return Icons.build_rounded;
-    if (lower.contains('sport')) return Icons.sports_basketball_rounded;
-    return Icons.category_rounded;
-  }
+IconData _getIconForCategory(String name) {
+  final lower = name.toLowerCase();
+  
+  // Clothing & Fashion
+  if (lower.contains('men_clothes')) return Icons.man_rounded;
+  if (lower.contains('women_clothes')) return Icons.woman_rounded;
+  if (lower.contains('shoes')) return Icons.snowshoeing_rounded;
+  if (lower.contains('clothes')) return Icons.checkroom_rounded;
+  if (lower.contains('access')) return Icons.watch_outlined;
+  
+  // Electronics
+  if (lower.contains('phones') || lower.contains('smartphone')) return Icons.smartphone_rounded;
+  if (lower.contains('laptops')) return Icons.laptop_mac_rounded;
+  if (lower.contains('electronics')) return Icons.devices_rounded;
+  
+  // Home & Beauty
+  if (lower.contains('home_garden') || lower.contains('home')) return Icons.home_work_rounded;
+  if (lower.contains('beauty')) return Icons.face_retouching_natural_rounded;
+  if (lower.contains('perfume_men')) return Icons.flare_rounded;
+  if (lower.contains('perfume_women')) return Icons.brush_rounded;
+  if (lower.contains('perfume') || lower.contains('fragrance')) return Icons.auto_fix_high_rounded;
+  
+  // Kids & Hobbies
+  if (lower.contains('toys_kids') || lower.contains('kids')) return Icons.child_friendly_rounded;
+  if (lower.contains('educational_toys')) return Icons.psychology_rounded;
+  if (lower.contains('toys')) return Icons.toys_rounded;
+  
+  // Tech & Tools
+  if (lower.contains('spare_parts')) return Icons.construction_rounded;
+  if (lower.contains('car_acc') || lower.contains('auto_parts')) return Icons.directions_car_filled_rounded;
+  if (lower.contains('auto')) return Icons.settings_input_component_rounded;
+  if (lower.contains('power_tools')) return Icons.bolt_rounded;
+  if (lower.contains('hand_tools')) return Icons.hardware_rounded;
+  if (lower.contains('tools')) return Icons.build_rounded;
+  
+  if (lower.contains('sport')) return Icons.sports_basketball_rounded;
+  
+  return Icons.category_rounded;
+}
+
+Color _getCategoryColor(BuildContext context, String name) {
+  final lower = name.toLowerCase();
+  final primary = Theme.of(context).colorScheme.primary;
+
+  if (lower.contains('clothes')) return Colors.blue;
+  if (lower.contains('elec') || lower.contains('phone')) return Colors.indigo;
+  if (lower.contains('home')) return Colors.green;
+  if (lower.contains('beauty') || lower.contains('perfume')) return Colors.pink;
+  if (lower.contains('kids') || lower.contains('toys')) return Colors.orange;
+  if (lower.contains('auto') || lower.contains('tool')) return Colors.blueGrey;
+  if (lower.contains('sport')) return Colors.red;
+  
+  return primary;
 }
 
 class _PopularCategoryCard extends StatefulWidget {
@@ -194,60 +269,76 @@ class _PopularCategoryCardState extends State<_PopularCategoryCard> {
   @override
   Widget build(BuildContext context) {
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final iconBg = Theme.of(context).colorScheme.primary.withOpacity(widget.isDark ? 0.2 : 0.1);
+    final catColor = _getCategoryColor(context, widget.name);
+    final iconBg = catColor.withValues(alpha: widget.isDark ? 0.25 : 0.12);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutBack,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.08 : 1.0),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: _isHovered 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.2 : 0.4),
-          width: 1,
+            ? catColor.withValues(alpha: 0.5)
+            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.15 : 0.08),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isHovered ? 0.15 : (widget.isDark ? 0.2 : 0.04)),
-            blurRadius: _isHovered ? 15 : 10,
-            offset: Offset(0, _isHovered ? 6 : 4),
+            color: catColor.withValues(alpha: _isHovered ? 0.2 : 0.0),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: widget.isDark ? 0.25 : 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           onTap: widget.onTap,
           onHover: (hovering) => setState(() => _isHovered = hovering),
           mouseCursor: SystemMouseCursors.click,
+          splashColor: catColor.withValues(alpha: 0.1),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: iconBg,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: catColor.withValues(alpha: 0.1),
+                      width: 1,
+                    ),
+                  ),
                   child: Icon(
                     widget.icon,
-                    color: Theme.of(context).colorScheme.primary,
-                    size: MediaQuery.sizeOf(context).width < 380 ? 20 : 22,
+                    color: catColor.withValues(alpha: widget.isDark ? 0.9 : 0.8),
+                    size: 22,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Text(
                   widget.name,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: MediaQuery.sizeOf(context).width < 380 ? 10 : 11,
-                    fontWeight: FontWeight.w600,
-                    color: onSurface.withOpacity(0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: onSurface.withOpacity(0.9),
+                    letterSpacing: -0.3,
                   ),
-                  maxLines: 2,
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
@@ -283,71 +374,96 @@ class _RootCategoryCardState extends State<_RootCategoryCard> {
   Widget build(BuildContext context) {
     final surface = Theme.of(context).colorScheme.surface;
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final catColor = _getCategoryColor(context, widget.name);
+    final iconBg = catColor.withValues(alpha: widget.isDark ? 0.25 : 0.1);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeOutCubic,
-      transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOutBack,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.04 : 1.0),
       decoration: BoxDecoration(
         color: surface,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         border: Border.all(
           color: _isHovered 
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
-            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.2 : 0.4),
-          width: 1,
+            ? catColor.withValues(alpha: 0.5)
+            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.15 : 0.08),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: _isHovered ? 0.2 : (widget.isDark ? 0.25 : 0.04)),
-            blurRadius: _isHovered ? 24 : 16,
-            offset: Offset(0, _isHovered ? 12 : 8),
+            color: catColor.withValues(alpha: _isHovered ? 0.25 : 0.0),
+            blurRadius: 32,
+            offset: const Offset(0, 16),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: widget.isDark ? 0.25 : 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
             onHover: (hovering) => setState(() => _isHovered = hovering),
             mouseCursor: SystemMouseCursors.click,
-            splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+            splashColor: catColor.withValues(alpha: 0.12),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    catColor.withValues(alpha: widget.isDark ? 0.05 : 0.02),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Theme.of(context).colorScheme.primary.withValues(alpha: widget.isDark ? 0.3 : 0.1),
-                          Theme.of(context).colorScheme.primary.withValues(alpha: widget.isDark ? 0.1 : 0.05),
+                          catColor.withValues(alpha: widget.isDark ? 0.35 : 0.15),
+                          catColor.withValues(alpha: widget.isDark ? 0.15 : 0.08),
                         ],
                       ),
                       shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: catColor.withValues(alpha: 0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Icon(
                       widget.icon,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 26,
+                      color: catColor.withValues(alpha: widget.isDark ? 0.95 : 0.85),
+                      size: 32,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   Text(
                     widget.name,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
                       color: onSurface,
-                      letterSpacing: -0.2,
+                      letterSpacing: -0.5,
+                      height: 1.1,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
