@@ -109,11 +109,11 @@ class _CategoryProductsScreenState extends ConsumerState<CategoryProductsScreen>
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       itemCount: filtered.length,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.sizeOf(context).width > 1000 ? 5 : (MediaQuery.sizeOf(context).width > 700 ? 3 : 2),
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        childAspectRatio: 0.65,
+                        childAspectRatio: MediaQuery.sizeOf(context).width > 1000 ? 0.75 : 0.65,
                       ),
                       itemBuilder: (context, index) {
                         return _CategoryProductCard(item: filtered[index]);

@@ -206,10 +206,10 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
+                          crossAxisCount: MediaQuery.sizeOf(context).width > 1000 ? 5 : (MediaQuery.sizeOf(context).width > 700 ? 3 : 2),
                           mainAxisSpacing: 16,
                           crossAxisSpacing: 16,
-                          childAspectRatio: MediaQuery.sizeOf(context).width < 380 ? 0.62 : 0.68,
+                          childAspectRatio: MediaQuery.sizeOf(context).width > 1000 ? 0.75 : (MediaQuery.sizeOf(context).width < 380 ? 0.62 : 0.68),
                         ),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {

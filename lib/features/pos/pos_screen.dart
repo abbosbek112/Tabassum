@@ -85,16 +85,14 @@ class _PosBodyState extends ConsumerState<_PosBody> {
         surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        MediaQuery.sizeOf(context).width < 380 ? 16 : 24, 
-        32, 
-        MediaQuery.sizeOf(context).width < 380 ? 16 : 24, 
-        140
-      ),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 16 : 24),
+        padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 600),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              padding: EdgeInsets.all(MediaQuery.sizeOf(context).width < 380 ? 16 : 24),
         decoration: BoxDecoration(
           color: Theme.of(context).cardColor,
           borderRadius: BorderRadius.circular(24),
@@ -265,11 +263,13 @@ class _PosBodyState extends ConsumerState<_PosBody> {
               ),
             ),
           ],
+            ),
+          ),
         ),
       ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   bool _isStockValid() {
     if (_selectedVariant == null) return true;

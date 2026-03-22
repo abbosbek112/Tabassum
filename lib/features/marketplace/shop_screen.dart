@@ -758,11 +758,11 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                   return SliverPadding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     sliver: SliverGrid(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: MediaQuery.sizeOf(context).width > 1000 ? 5 : (MediaQuery.sizeOf(context).width > 700 ? 3 : 2),
                         mainAxisSpacing: 16,
                         crossAxisSpacing: 16,
-                        childAspectRatio: 0.7,
+                        childAspectRatio: MediaQuery.sizeOf(context).width > 1000 ? 0.8 : 0.7,
                       ),
                       delegate: SliverChildBuilderDelegate(
                         (context, index) => _UltimateProductCard(

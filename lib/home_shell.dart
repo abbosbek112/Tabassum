@@ -55,29 +55,45 @@ class HomeShell extends ConsumerWidget {
                        location == '/seller/pos';
 
     return Scaffold(
-      body: Stack(
-        children: [
-          // Main page content
-          Positioned.fill(child: child),
-          // Loading indicator
-          if (profileAsync.isLoading)
-            const Align(
-              alignment: Alignment.topCenter,
-              child: LinearProgressIndicator(minHeight: 2),
-            ),
-          // Floating nav bar pinned to bottom
-          if (isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 24,
-              child: _NavBar(
-                destinations: destinations,
-                selectedIndex: selectedIndex,
-                onTap: (path) => context.go(path),
-              ),
-            ),
-        ],
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: Stack(
+            children: [
+              // Main page content
+              Positioned.fill(child: child),
+              
+              // Loading indicator
+              if (profileAsync.isLoading)
+                const Align(
+                  alignment: Alignment.topCenter,
+                  child: LinearProgressIndicator(minHeight: 2),
+                ),
+                
+              // Floating nav bar pinned to bottom
+              if (isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 24,
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 600),
+                        child: _NavBar(
+                          destinations: destinations,
+                          selectedIndex: selectedIndex,
+                          onTap: (path) => context.go(path),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

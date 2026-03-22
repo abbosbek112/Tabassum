@@ -154,11 +154,17 @@ class _ProductsBody extends ConsumerWidget {
                     ),
                   );
                 }
-                return ListView.separated(
+                final isWide = MediaQuery.sizeOf(context).width > 700;
+                return GridView.builder(
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 140),
+                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
                   itemCount: inventoryItems.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isWide ? 2 : 1,
+                    mainAxisExtent: isWide ? 220 : 180,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
+                  ),
                   itemBuilder: (context, idx) {
                     final inv = inventoryItems[idx];
                     return _InventoryCard(inv: inv);

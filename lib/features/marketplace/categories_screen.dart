@@ -135,10 +135,10 @@ class CategoriesScreen extends ConsumerWidget {
                     childCount: categories.length,
                   ),
                   gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
+                    crossAxisCount: MediaQuery.sizeOf(context).width > 1000 ? 5 : (MediaQuery.sizeOf(context).width > 700 ? 4 : (MediaQuery.sizeOf(context).width > 500 ? 3 : 2)),
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: MediaQuery.sizeOf(context).width < 380 ? 1.05 : 1.1,
+                    childAspectRatio: MediaQuery.sizeOf(context).width > 1000 ? 1.2 : (MediaQuery.sizeOf(context).width < 380 ? 1.05 : 1.1),
                   ),
                 ),
               );
