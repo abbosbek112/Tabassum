@@ -374,38 +374,52 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
   }
 }
 
-class _ProductCard extends ConsumerWidget {
+class _ProductCard extends ConsumerStatefulWidget {
   final InventoryModel item;
   const _ProductCard({required this.item});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ProductCard> createState() => _ProductCardState();
+}
+
+class _ProductCardState extends ConsumerState<_ProductCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final item = widget.item;
     final shopAsync = ref.watch(shopByIdProvider(item.shopId));
+    
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final surface = Theme.of(context).colorScheme.surface;
-    final surfacePlaceholder = isDark
-        ? const Color(0xFF252930)
-        : const Color(0xFFF1F5F9);
+    final surfacePlaceholder = isDark ? const Color(0xFF1E293B) : const Color(0xFFF1F5F9);
 
     return shopAsync.when(
       data: (shop) {
-        if (shop == null) return const SizedBox.shrink(); // Hide orphan products
+        if (shop == null) return const SizedBox.shrink();
         
-        return GestureDetector(
+        return InkWell(
           onTap: () => context.push('/market/product/${item.id}'),
-          child: Container(
+          onHover: (hovering) => setState(() => _isHovered = hovering),
+          mouseCursor: SystemMouseCursors.click,
+          borderRadius: BorderRadius.circular(20),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
             decoration: BoxDecoration(
-              color: surface,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
+                color: _isHovered 
+                  ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+                  : Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
+                  color: Colors.black.withValues(alpha: _isHovered ? 0.2 : (isDark ? 0.3 : 0.06)),
+                  blurRadius: _isHovered ? 24 : 16,
+                  offset: Offset(0, _isHovered ? 12 : 6),
                 ),
               ],
             ),

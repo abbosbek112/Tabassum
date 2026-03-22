@@ -54,46 +54,61 @@ class HomeShell extends ConsumerWidget {
                        location == '/seller/dashboard' || 
                        location == '/seller/pos';
 
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isDesktop = screenWidth > 900;
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: Stack(
-            children: [
-              // Main page content
-              Positioned.fill(child: child),
-              
-              // Loading indicator
-              if (profileAsync.isLoading)
-                const Align(
-                  alignment: Alignment.topCenter,
-                  child: LinearProgressIndicator(minHeight: 2),
-                ),
-                
-              // Floating nav bar pinned to bottom
-              if (isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 24,
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 600),
-                        child: _NavBar(
-                          destinations: destinations,
-                          selectedIndex: selectedIndex,
-                          onTap: (path) => context.go(path),
+      body: Row(
+        children: [
+          if (isDesktop)
+            _DesktopSideBar(
+              destinations: destinations,
+              selectedIndex: selectedIndex,
+              onTap: (path) => context.go(path),
+            ),
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Stack(
+                  children: [
+                    // Main page content
+                    Positioned.fill(child: child),
+                    
+                    // Loading indicator
+                    if (profileAsync.isLoading)
+                      const Align(
+                        alignment: Alignment.topCenter,
+                        child: LinearProgressIndicator(minHeight: 2),
+                      ),
+                      
+                    // Floating nav bar pinned to bottom (Mobile/Tablet only)
+                    if (!isDesktop && isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 24,
+                        child: Center(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 600),
+                              child: _NavBar(
+                                destinations: destinations,
+                                selectedIndex: selectedIndex,
+                                onTap: (path) => context.go(path),
+                              ),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
+                  ],
                 ),
-            ],
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -103,6 +118,116 @@ class HomeShell extends ConsumerWidget {
     if (exact != -1) return exact;
     final prefix = dests.indexWhere((d) => location.startsWith('${d.path}/'));
     return prefix == -1 ? 0 : prefix;
+  }
+}
+
+class _DesktopSideBar extends StatelessWidget {
+  final List<_NavDest> destinations;
+  final int selectedIndex;
+  final void Function(String path) onTap;
+
+  const _DesktopSideBar({
+    required this.destinations,
+    required this.selectedIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Container(
+      width: 280,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F172A) : Colors.white,
+        border: Border(
+          right: BorderSide(
+            color: Theme.of(context).dividerColor.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 40),
+          // Logo or App Name
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'TABASSUM',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 20,
+                    letterSpacing: -1.0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 48),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: destinations.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 4),
+              itemBuilder: (context, index) {
+                final d = destinations[index];
+                final isSelected = selectedIndex == index;
+                
+                return InkWell(
+                  onTap: () => onTap(d.path),
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: isSelected 
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.08)
+                        : Colors.transparent,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          d.icon,
+                          size: 24,
+                          color: isSelected 
+                            ? Theme.of(context).colorScheme.primary 
+                            : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          d.label,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                            color: isSelected 
+                              ? Theme.of(context).colorScheme.primary 
+                              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
   }
 }
 

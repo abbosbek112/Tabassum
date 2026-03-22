@@ -117,6 +117,66 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
     final wishedAsync = ref.watch(isWishedProvider(widget.inventory.id));
     final wished = wishedAsync.valueOrNull ?? false;
     final telegram = shopAsync.value?.telegram ?? '';
+    final price = _selectedVariant?.priceOverride ?? widget.inventory.basePrice;
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isDesktop = screenWidth > 900;
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Stack(
+          children: [
+            Row(
+              children: [
+                // Left: Images
+                Expanded(
+                  flex: 3,
+                  child: Container(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 800),
+                        child: _buildHeroImage(),
+                      ),
+                    ),
+                  ),
+                ),
+                // Right: Details
+                Expanded(
+                  flex: 2,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 60),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(wished),
+                        const SizedBox(height: 32),
+                        if (widget.inventory.about.isNotEmpty) ...[
+                          Text(context.l('about_product').toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary.withOpacity(0.7), letterSpacing: 1)),
+                          const SizedBox(height: 12),
+                          Text(widget.inventory.about, style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface, height: 1.6)),
+                          const SizedBox(height: 40),
+                        ],
+                        _buildVariantSelector(variantsAsync),
+                        const SizedBox(height: 40),
+                        _buildDesktopPriceAction(price, telegram),
+                        const SizedBox(height: 48),
+                        _ReviewsSection(inventory: widget.inventory),
+                        const SizedBox(height: 40),
+                        if (telegram.isNotEmpty) _buildContactSection(telegram),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            _buildAppBar(context, ref.watch(twaServiceProvider)),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -159,6 +219,46 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
           ),
           _buildAppBar(context, ref.watch(twaServiceProvider)),
           _buildBottomAction(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopPriceAction(num price, String telegram) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(context.l('payment') ?? 'Price', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              Text('$price sum', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900)),
+            ],
+          ),
+          const Spacer(),
+          if (telegram.isNotEmpty)
+            ElevatedButton.icon(
+              onPressed: () async {
+                String handle = telegram.replaceAll('https://t.me/', '').replaceAll('t.me/', '').replaceAll('@', '');
+                final botUsername = 'tabassum_market_bot';
+                final appLink = 'https://t.me/$botUsername/app?startapp=product_${widget.inventory.id}';
+                final message = Uri.encodeComponent('Assalomu alaykum! Men Tabassum ilovasida ko\'rgan mana bu mahsulotingizga qiziqib qoldim: ${widget.inventory.name}\n\nHavola: $appLink');
+                final uri = Uri.parse('https://t.me/$handle?text=$message');
+                if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+              },
+              icon: const Icon(Icons.telegram),
+              label: Text(context.l('contact_tg') ?? 'CONTACT'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 20),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
         ],
       ),
     );
@@ -950,6 +1050,7 @@ class _AddReviewSheetState extends ConsumerState<_AddReviewSheet> {
 
   @override
   Widget build(BuildContext context) {
+
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
     final navBarHeight = 140.0;
     final bottomPadding = bottomInset > 0 ? bottomInset + 24 : navBarHeight;

@@ -171,7 +171,7 @@ class CategoriesScreen extends ConsumerWidget {
   }
 }
 
-class _PopularCategoryCard extends StatelessWidget {
+class _PopularCategoryCard extends StatefulWidget {
   final String name;
   final IconData icon;
   final VoidCallback onTap;
@@ -185,27 +185,35 @@ class _PopularCategoryCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
-    final onSurface = Theme.of(context).colorScheme.onSurface;
-    final iconBg = isDark
-        ? Theme.of(context).colorScheme.primaryContainer.withOpacity(0.15)
-        : Theme.of(context).colorScheme.primaryContainer.withOpacity(0.1);
+  State<_PopularCategoryCard> createState() => _PopularCategoryCardState();
+}
 
-    return Container(
-      width: MediaQuery.sizeOf(context).width < 380 ? 90 : 100,
+class _PopularCategoryCardState extends State<_PopularCategoryCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+    final iconBg = Theme.of(context).colorScheme.primary.withOpacity(widget.isDark ? 0.2 : 0.1);
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
       decoration: BoxDecoration(
-        color: surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
+          color: _isHovered 
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.2 : 0.4),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: _isHovered ? 0.15 : (widget.isDark ? 0.2 : 0.04)),
+            blurRadius: _isHovered ? 15 : 10,
+            offset: Offset(0, _isHovered ? 6 : 4),
           ),
         ],
       ),
@@ -213,7 +221,9 @@ class _PopularCategoryCard extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
+          onTap: widget.onTap,
+          onHover: (hovering) => setState(() => _isHovered = hovering),
+          mouseCursor: SystemMouseCursors.click,
           child: Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -223,14 +233,14 @@ class _PopularCategoryCard extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
                   child: Icon(
-                    icon,
+                    widget.icon,
                     color: Theme.of(context).colorScheme.primary,
                     size: MediaQuery.sizeOf(context).width < 380 ? 20 : 22,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  name,
+                  widget.name,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: MediaQuery.sizeOf(context).width < 380 ? 10 : 11,
@@ -249,7 +259,7 @@ class _PopularCategoryCard extends StatelessWidget {
   }
 }
 
-class _RootCategoryCard extends StatelessWidget {
+class _RootCategoryCard extends StatefulWidget {
   final String name;
   final IconData icon;
   final VoidCallback onTap;
@@ -263,28 +273,35 @@ class _RootCategoryCard extends StatelessWidget {
   });
 
   @override
+  State<_RootCategoryCard> createState() => _RootCategoryCardState();
+}
+
+class _RootCategoryCardState extends State<_RootCategoryCard> {
+  bool _isHovered = false;
+
+  @override
   Widget build(BuildContext context) {
     final surface = Theme.of(context).colorScheme.surface;
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    // Icon circle: separate elevated surface
-    final iconGradient = [
-      Theme.of(context).colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.1),
-      Theme.of(context).colorScheme.primary.withValues(alpha: isDark ? 0.1 : 0.05),
-    ];
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
       decoration: BoxDecoration(
         color: surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
+          color: _isHovered 
+            ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.2 : 0.4),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.25 : 0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: _isHovered ? 0.2 : (widget.isDark ? 0.25 : 0.04)),
+            blurRadius: _isHovered ? 24 : 16,
+            offset: Offset(0, _isHovered ? 12 : 8),
           ),
         ],
       ),
@@ -293,7 +310,9 @@ class _RootCategoryCard extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: onTap,
+            onTap: widget.onTap,
+            onHover: (hovering) => setState(() => _isHovered = hovering),
+            mouseCursor: SystemMouseCursors.click,
             splashColor: Theme.of(context).colorScheme.primary.withOpacity(0.12),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -301,38 +320,34 @@ class _RootCategoryCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 56,
-                    height: 56,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
                       gradient: LinearGradient(
-                        colors: iconGradient,
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primary.withValues(alpha: widget.isDark ? 0.3 : 0.1),
+                          Theme.of(context).colorScheme.primary.withValues(alpha: widget.isDark ? 0.1 : 0.05),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Theme.of(context).colorScheme.primary.withValues(alpha: isDark ? 0.3 : 0.15),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      icon,
-                      size: 24,
+                      widget.icon,
                       color: Theme.of(context).colorScheme.primary,
+                      size: 26,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    name,
+                    widget.name,
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: -0.2,
                       color: onSurface,
+                      letterSpacing: -0.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,

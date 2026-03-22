@@ -1027,84 +1027,103 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
   }
 }
 
-class _UltimateProductCard extends ConsumerWidget {
+class _UltimateProductCard extends ConsumerStatefulWidget {
   final InventoryModel inv;
   final bool isOwner;
   const _UltimateProductCard({required this.inv, this.isOwner = false});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_UltimateProductCard> createState() => _UltimateProductCardState();
+}
+
+class _UltimateProductCardState extends ConsumerState<_UltimateProductCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final inv = widget.inv;
+    final isOwner = widget.isOwner;
     final wishedAsync = ref.watch(isWishedProvider(inv.id));
     final wished = wishedAsync.valueOrNull ?? false;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    
+    return InkWell(
+      onTap: () => context.push('/market/product/${inv.id}'),
+      onHover: (hovering) => setState(() => _isHovered = hovering),
+      mouseCursor: SystemMouseCursors.click,
+      borderRadius: BorderRadius.circular(24),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOutCubic,
+        transform: Matrix4.identity()..scale(_isHovered ? 1.02 : 1.0),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: _isHovered 
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.5)
+              : Theme.of(context).colorScheme.outline.withOpacity(0.1),
           ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: InkWell(
-          onTap: () => context.push('/market/product/${inv.id}'),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Expanded(
-                child: Stack(
-                  children: [
-                    Positioned.fill(
-                      child: Hero(
-                        tag: 'product-${inv.id}',
-                        child: inv.imageUrls.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: inv.imageUrls.first,
-                                fit: BoxFit.cover,
-                              )
-                            : Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
-                      ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(_isHovered ? 0.15 : (isDark ? 0.2 : 0.04)),
+              blurRadius: _isHovered ? 28 : 20,
+              offset: Offset(0, _isHovered ? 12 : 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Hero(
+                      tag: 'product-${inv.id}',
+                      child: inv.imageUrls.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: inv.imageUrls.first,
+                              fit: BoxFit.cover,
+                            )
+                          : Container(color: Theme.of(context).colorScheme.surfaceContainerHighest),
                     ),
-                    Positioned(
-                      top: 12,
-                      right: 12,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(100),
-                        child: BackdropFilter(
-                          filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                          child: Container(
-                            color: Theme.of(context).cardColor.withOpacity(0.7),
-                            child: IconButton(
-                              icon: Icon(
-                                isOwner ? Icons.edit : (wished ? Icons.favorite : Icons.favorite_border),
-                                size: 18,
-                                color: isOwner ? Theme.of(context).iconTheme.color : (wished ? Colors.red : Theme.of(context).iconTheme.color?.withOpacity(0.7)),
-                              ),
-                              onPressed: () async {
-                                if (isOwner) {
-                                  context.push('/seller/products/inventory/${inv.id}');
-                                } else {
-                                  await ref.read(wishlistRepositoryProvider).toggleWishlist(
-                                        productId: inv.id,
-                                        shopId: inv.shopId,
-                                      );
-                                }
-                              },
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: BackdropFilter(
+                        filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                        child: Container(
+                          color: Theme.of(context).cardColor.withOpacity(0.7),
+                          child: IconButton(
+                            icon: Icon(
+                              isOwner ? Icons.edit : (wished ? Icons.favorite : Icons.favorite_border),
+                              size: 18,
+                              color: isOwner ? Theme.of(context).iconTheme.color : (wished ? Colors.red : Theme.of(context).iconTheme.color?.withOpacity(0.7)),
                             ),
+                            onPressed: () async {
+                              if (isOwner) {
+                                context.push('/seller/products/inventory/${inv.id}');
+                              } else {
+                                await ref.read(wishlistRepositoryProvider).toggleWishlist(
+                                      productId: inv.id,
+                                      shopId: inv.shopId,
+                                    );
+                              }
+                            },
                           ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+            ),
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -1136,8 +1155,7 @@ class _UltimateProductCard extends ConsumerWidget {
                   ],
                 ),
               ),
-            ],
-          ),
+          ],
         ),
       ),
     );
