@@ -48,8 +48,10 @@ class InventoryRepository {
   }) async {
     // Note: no orderBy here — combining arrayContains/equality + orderBy needs
     // composite indexes. We sort on the Dart side instead.
-    Query<Map<String, dynamic>> query =
-        db.collection(FirestoreCollections.inventory).limit(limit);
+    Query<Map<String, dynamic>> query = db
+        .collection(FirestoreCollections.inventory)
+        .where('subscriptionActive', isEqualTo: true)
+        .limit(limit);
 
     if (categoryId != null) {
       query = query.where('categoryIds', arrayContains: categoryId);

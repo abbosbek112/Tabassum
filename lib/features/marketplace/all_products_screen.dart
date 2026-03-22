@@ -387,170 +387,180 @@ class _ProductCard extends ConsumerWidget {
         ? const Color(0xFF252930)
         : const Color(0xFFF1F5F9);
 
-    return GestureDetector(
-      onTap: () => context.push('/market/product/${item.id}'),
-      child: Container(
-        decoration: BoxDecoration(
-          color: surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
+    return shopAsync.when(
+      data: (shop) {
+        if (shop == null) return const SizedBox.shrink(); // Hide orphan products
+        
+        return GestureDetector(
+          onTap: () => context.push('/market/product/${item.id}'),
+          child: Container(
+            decoration: BoxDecoration(
+              color: surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: isDark ? 0.2 : 0.4),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background Image
-            if (item.imageUrls.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: item.imageUrls.first,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: surfacePlaceholder,
-                  child: Center(
-                    child: Icon(
-                      Icons.image_outlined,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
-                      size: 40,
-                    ),
-                  ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: surfacePlaceholder,
-                  child: Icon(
-                    Icons.broken_image_outlined,
-                    color: isDark ? const Color(0xFF4B5563) : const Color(0xFF94A3B8),
-                    size: 40,
-                  ),
-                ),
-              )
-            else
-              Container(
-                color: surfacePlaceholder,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.image_outlined,
-                      color: isDark ? const Color(0xFF4B5563) : const Color(0xFF94A3B8),
-                      size: 48,
-                    ),
-                  ],
-                ),
-              ),
-
-            // Gradient Overlay for text readability
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              height: 110,
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.85),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            // Floating Price Tag (Top Right)
-            if (item.basePrice > 0)
-              Positioned(
-                top: 10,
-                right: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface.withOpacity(0.92),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Text(
-                    '${item.basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} sum',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      color: Theme.of(context).colorScheme.onSurface,
-                    ),
-                  ),
-                ),
-              ),
-
-            // Bottom Info (Title & Shop)
-            Positioned(
-              left: 12,
-              right: 12,
-              bottom: 12,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                      color: Colors.white,
-                      height: 1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: shopAsync.when(
-                          data: (shop) => Text(
-                            shop?.name ?? context.l('unknown_shop') ?? 'Unknown Shop',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          error: (_, __) => const SizedBox(),
-                          loading: () => const SizedBox(),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Background Image
+                if (item.imageUrls.isNotEmpty)
+                  CachedNetworkImage(
+                    imageUrl: item.imageUrls.first,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: surfacePlaceholder,
+                      child: Center(
+                        child: Icon(
+                          Icons.image_outlined,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                          size: 40,
                         ),
                       ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: surfacePlaceholder,
+                      child: Icon(
+                        Icons.broken_image_outlined,
+                        color: isDark ? const Color(0xFF4B5563) : const Color(0xFF94A3B8),
+                        size: 40,
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    color: surfacePlaceholder,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.image_outlined,
+                          color: isDark ? const Color(0xFF4B5563) : const Color(0xFF94A3B8),
+                          size: 48,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Gradient Overlay for text readability
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 110,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [
+                          Colors.black.withOpacity(0.85),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Floating Price Tag (Top Right)
+                if (item.basePrice > 0)
+                  Positioned(
+                    top: 10,
+                    right: 10,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surface.withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(100),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.outline.withOpacity(0.2),
+                        ),
+                      ),
+                      child: Text(
+                        '${item.basePrice.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]} ')} sum',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                // Bottom Info (Title & Shop)
+                Positioned(
+                  left: 12,
+                  right: 12,
+                  bottom: 12,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.name,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          color: Colors.white,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 13),
-                          const SizedBox(width: 3),
-                          Text(
-                            item.rating > 0 ? item.rating.toStringAsFixed(1) : '0.0',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 11,
-                              color: Colors.white,
+                          Expanded(
+                            child: Text(
+                              shop.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
+                          ),
+                          Row(
+                            children: [
+                              const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 13),
+                              const SizedBox(width: 3),
+                              Text(
+                                item.rating > 0 ? item.rating.toStringAsFixed(1) : '0.0',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
+        );
+      },
+      error: (_, __) => const SizedBox.shrink(),
+      loading: () => Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: surfacePlaceholder,
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     );
