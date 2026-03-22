@@ -40,22 +40,34 @@ class DashboardScreen extends ConsumerWidget {
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
-            title: Text(context.l('dashboard') ?? 'Dashboard'),
+            title: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(context.l('dashboard') ?? 'Dashboard'),
+            ),
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             actions: [
-              _NotificationBell(shopId: shop.id),
-              IconButton(
-                tooltip: 'Sign out',
-                icon: const Icon(Icons.logout, color: Colors.red),
-                onPressed: () async {
-                  await ref.read(authRepositoryProvider).signOut();
-                  if (context.mounted) context.go('/auth');
-                },
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: _NotificationBell(shopId: shop.id),
               ),
-              IconButton(
-                icon: const Icon(Icons.settings_outlined),
-                onPressed: () => context.push('/seller/settings'),
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: IconButton(
+                  tooltip: 'Sign out',
+                  icon: const Icon(Icons.logout, color: Colors.red),
+                  onPressed: () async {
+                    await ref.read(authRepositoryProvider).signOut();
+                    if (context.mounted) context.go('/auth');
+                  },
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 8, right: 8),
+                child: IconButton(
+                  icon: const Icon(Icons.settings_outlined),
+                  onPressed: () => context.push('/seller/settings'),
+                ),
               ),
             ],
           ),

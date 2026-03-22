@@ -56,7 +56,10 @@ class _ProductsBody extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFCFCFD),
       appBar: AppBar(
-        title: Text(context.l('inventory') ?? 'Inventory', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(context.l('inventory') ?? 'Inventory', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
+        ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -152,6 +155,7 @@ class _ProductsBody extends ConsumerWidget {
                   );
                 }
                 return ListView.separated(
+                  physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(16, 24, 16, 140),
                   itemCount: inventoryItems.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 16),
@@ -380,8 +384,9 @@ class AddInventorySheet extends ConsumerStatefulWidget {
 
 class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
   final _name = TextEditingController();
-  String? _selectedCategory;
-  String _selectedGender = 'unisex';
+  final List<String> _selectedCategoryIds = [];
+  String? _categoryToAdd;
+  String _selectedGender = 'unisex'; // Target audience for clothing
   final _about = TextEditingController();
   final _basePrice = TextEditingController();
   final _brand = TextEditingController();
@@ -396,6 +401,8 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
 
   bool _busy = false;
   final List<({XFile file, Uint8List bytes})> _pickedImages = [];
+  static const int _maxPickedImages = 8;
+  static const int _uploadConcurrency = 3;
 
   @override
   void dispose() {
@@ -480,7 +487,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
                     _buildField(_brand, context.l('brand') ?? 'Brand', context.l('brand_hint') ?? 'e.g. Nike, Zara, Samsung'),
                     _buildCategoryDropdown(),
                     if (widget.shop.genre == ShopGenre.clothes)
-                      _buildGenderDropdown(),
+                      _buildTargetAudienceDropdown(),
                   ]),
                   const SizedBox(height: 32),
                   _buildSection(context.l('description') ?? 'Description', [
@@ -533,28 +540,96 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
     final categoriesAsync = ref.watch(categoriesStreamProvider);
     return categoriesAsync.when(
       data: (categories) {
-        final list = categories.isEmpty 
-          ? [
-              'Futbolka', 'Shim', 'Kurtka', 'Kostyum-shim', 'Ko\'ylak', 
-              'Libos', 'Sport kiyimi', 'Ichki kiyim', 'Paypoq', 
-              'Bosh kiyim', 'Poyabzal', 'Aksesuar', 'Bolalar kiyimi'
-            ] 
-          : categories.where((c) => c.parentId == widget.shop.genre.name).map((c) => c.name).toList();
+        final mainCatId = switch (widget.shop.genre) {
+          ShopGenre.auto => 'avto_qismlar',
+          ShopGenre.toys => 'bolalar_kiyimi',
+          ShopGenre.perfumery => 'gozallik_salomatlik',
+          ShopGenre.clothes => 'kiyim_kechak',
+          ShopGenre.electronics => 'elektronika',
+          ShopGenre.home => 'xojalik_mollari',
+          ShopGenre.jewelry => 'taqinchoqlar',
+          ShopGenre.other => 'boshqa',
+        };
+
+        var filteredItems = categories.where((c) => c.parentId == mainCatId).toList();
+        if (filteredItems.isEmpty) {
+          filteredItems = categories.where((c) => c.id == mainCatId).toList();
+        }
         
-        final filteredItems = categories.where((c) => c.parentId == widget.shop.genre.name).toList();
+        // If shop genre is 'other', or no items were found, show all main categories
+        if (filteredItems.isEmpty || widget.shop.genre == ShopGenre.other) {
+          filteredItems = categories.where((c) => c.parentId == null).toList();
+        }
+
+        final categoriesById = {for (final c in categories) c.id: c};
+        final options = filteredItems.map((e) => e.id).toList();
+        final dropdownValue = (_categoryToAdd != null && options.contains(_categoryToAdd))
+            ? _categoryToAdd
+            : (options.isNotEmpty ? options.first : null);
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: DropdownButtonFormField<String>(
-            initialValue: _selectedCategory,
-            decoration: InputDecoration(
-              labelText: context.l('categories') ?? 'Category', 
-              border: InputBorder.none, 
-              filled: true, 
-              fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-              labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13),
-            ),
-            items: filteredItems.map((c) => DropdownMenuItem(value: c.id, child: Text(context.l(c.name) ?? c.name))).toList(),
-            onChanged: (val) => setState(() => _selectedCategory = val),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_selectedCategoryIds.isNotEmpty)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _selectedCategoryIds.map((catId) {
+                    final cat = categoriesById[catId];
+                    final label = cat == null ? catId : (context.l(cat.name) ?? cat.name);
+                    return InputChip(
+                      label: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                      selected: true,
+                      onDeleted: () => setState(() => _selectedCategoryIds.remove(catId)),
+                    );
+                  }).toList(),
+                ),
+              const SizedBox(height: 8),
+              if (options.isEmpty)
+                _buildField(TextEditingController(), 'Category', 'Error loading')
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: dropdownValue,
+                        decoration: InputDecoration(
+                          labelText: context.l('categories') ?? 'Category',
+                          border: InputBorder.none,
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          labelStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                        items: filteredItems
+                            .map((c) => DropdownMenuItem(
+                                  value: c.id,
+                                  child: Text(context.l(c.name) ?? c.name),
+                                ))
+                            .toList(),
+                        onChanged: (newVal) => setState(() => _categoryToAdd = newVal),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: (dropdownValue == null || _selectedCategoryIds.contains(dropdownValue))
+                          ? null
+                          : () => setState(() => _selectedCategoryIds.add(dropdownValue)),
+                      style: FilledButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        minimumSize: Size.zero,
+                      ),
+                      child: const Text('Qo‘shish', style: TextStyle(fontWeight: FontWeight.w900)),
+                    ),
+                  ],
+                ),
+            ],
           ),
         );
       },
@@ -563,22 +638,23 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
     );
   }
 
-  Widget _buildGenderDropdown() {
+  Widget _buildTargetAudienceDropdown() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: DropdownButtonFormField<String>(
-        initialValue: _selectedGender,
+        value: _selectedGender,
         decoration: InputDecoration(
-          labelText: context.l('role') ?? 'Gender', 
+          labelText: 'Kimga mo\'ljallangan', 
           border: InputBorder.none, 
           filled: true, 
           fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
           labelStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w600, fontSize: 13),
         ),
         items: [
-          DropdownMenuItem(value: 'male', child: Text(context.l('male'))),
-          DropdownMenuItem(value: 'female', child: Text(context.l('female'))),
-          DropdownMenuItem(value: 'unisex', child: Text(context.l('unisex'))),
+          DropdownMenuItem(value: 'male', child: Text('Erkaklar')),
+          DropdownMenuItem(value: 'female', child: Text('Ayollar')),
+          DropdownMenuItem(value: 'children', child: Text('Bolalar')),
+          DropdownMenuItem(value: 'unisex', child: Text('Hammaga (Uniseks)')),
         ],
         onChanged: (val) => setState(() => _selectedGender = val ?? 'unisex'),
       ),
@@ -586,19 +662,42 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final images = await picker.pickMultiImage(
-      imageQuality: 70,
-      maxWidth: 1200,
-      maxHeight: 1200,
-    );
-    if (images.isNotEmpty) {
+    try {
+      final picker = ImagePicker();
+      final images = await picker.pickMultiImage(
+        imageQuality: 70,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
+      if (images.isEmpty) return;
+
+      final remaining = _maxPickedImages - _pickedImages.length;
+      if (remaining <= 0) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(context.l('max_images_reached') ?? 'Maksimal 8 ta rasm qo\'shish mumkin')),
+          );
+        }
+        return;
+      }
+
+      final imagesToAdd = images.take(remaining);
+
       final List<({XFile file, Uint8List bytes})> newImages = [];
-      for (final img in images) {
+      for (final img in imagesToAdd) {
         final bytes = await img.readAsBytes();
         newImages.add((file: img, bytes: bytes));
       }
-      setState(() => _pickedImages.addAll(newImages));
+
+      if (mounted) {
+        setState(() => _pickedImages.addAll(newImages));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rasm tanlashda xato: $e'), backgroundColor: Colors.red),
+        );
+      }
     }
   }
 
@@ -734,6 +833,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
               Expanded(
                 child: TextField(
                   controller: group.color,
+                  enableInteractiveSelection: true,
                   style: TextStyle(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary),
                   decoration: InputDecoration(
                     labelText: context.l('color_name') ?? 'COLOR NAME',
@@ -920,6 +1020,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboard,
+        enableInteractiveSelection: true,
         style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
         decoration: InputDecoration(
           labelText: label,
@@ -949,6 +1050,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
       child: TextField(
         controller: controller,
         keyboardType: keyboard,
+        enableInteractiveSelection: true,
         style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         decoration: InputDecoration(
           labelText: label,
@@ -962,6 +1064,28 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
   }
 
   Future<void> _save() async {
+    final isClothes = widget.shop.genre == ShopGenre.clothes;
+    
+    // Check if any color group has a non-empty color and at least one variant with a non-empty size
+    bool hasValidColorAndVariant = false;
+    for (final group in _colorGroups) {
+      final color = group.color.text.trim();
+      if (color.isNotEmpty) {
+        final validVariantsInGroup = group.variants.where((v) => v.size.text.trim().isNotEmpty).toList();
+        if (validVariantsInGroup.isNotEmpty) {
+          hasValidColorAndVariant = true;
+          break;
+        }
+      }
+    }
+
+    if (isClothes && !hasValidColorAndVariant) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kiyim-kecha do\'koni uchun kamida bitta rang va o\'lcham kiriting!'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+    
     final name = _name.text.trim();
     if (name.isEmpty) return;
 
@@ -972,26 +1096,63 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
       // 1. Upload Images FIRST (blocking)
       List<String> uploadedUrls = [];
       if (_pickedImages.isNotEmpty) {
+        final uploadTs = DateTime.now().millisecondsSinceEpoch;
+        final tempUploadId = 'temp_$uploadTs';
+
         debugPrint('Product image upload starting for ${_pickedImages.length} images...');
-        final List<Future<String>> uploadTasks = _pickedImages.map((picked) async {
-          debugPrint('Uploading image: ${picked.file.name} (${picked.bytes.length} bytes)');
-          try {
-            final url = await repo.uploadImageBytes(
-              shopId: widget.shop.id,
-              inventoryId: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-              fileName: '${DateTime.now().millisecondsSinceEpoch}_${picked.file.name}',
-              bytes: picked.bytes,
-              contentType: 'image/jpeg',
-            );
-            debugPrint('Image upload success: $url');
-            return url;
-          } catch (e) {
-            debugPrint('Image upload FAIL for ${picked.file.name}: $e');
-            rethrow;
+
+        Future<String?> uploadOne(int index, ({XFile file, Uint8List bytes}) picked) async {
+          const maxAttempts = 2;
+          final fileName = '${uploadTs}_${index}_${picked.file.name}';
+          final lower = picked.file.name.toLowerCase();
+          final contentType = lower.endsWith('.png')
+              ? 'image/png'
+              : lower.endsWith('.webp')
+                  ? 'image/webp'
+                  : 'image/jpeg';
+
+          for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+              debugPrint('Uploading image #${index + 1} (attempt $attempt): ${picked.file.name} (${picked.bytes.length} bytes)');
+              final url = await repo
+                  .uploadImageBytes(
+                    shopId: widget.shop.id,
+                    inventoryId: tempUploadId,
+                    fileName: fileName,
+                    bytes: picked.bytes,
+                    contentType: contentType,
+                  )
+                  .timeout(const Duration(seconds: 120));
+
+              debugPrint('Image upload success #${index + 1}');
+              return url;
+            } catch (e) {
+              debugPrint('Image upload FAIL #${index + 1} (attempt $attempt) for ${picked.file.name}: $e');
+              if (attempt == maxAttempts) {
+                return null; // allow partial success
+              }
+
+              // Small backoff to avoid burst rate-limit issues.
+              await Future<void>.delayed(Duration(milliseconds: 300 * attempt));
+            }
           }
-        }).toList();
-        uploadedUrls = await Future.wait(uploadTasks).timeout(const Duration(seconds: 60));
-        debugPrint('All product images uploaded successfully: ${uploadedUrls.length} total');
+
+          return null;
+        }
+
+        // Upload in small batches to avoid Cloudinary/network overload and timeouts.
+        for (var start = 0; start < _pickedImages.length; start += _uploadConcurrency) {
+          final end = (start + _uploadConcurrency).clamp(0, _pickedImages.length);
+          final batch = _pickedImages.sublist(start, end);
+
+          final batchResults = await Future.wait(
+            List.generate(batch.length, (i) => uploadOne(start + i, batch[i])),
+          );
+
+          uploadedUrls.addAll(batchResults.whereType<String>());
+        }
+
+        debugPrint('All product images upload done. Success: ${uploadedUrls.length}/${_pickedImages.length}');
       }
 
       // 2. Aggregate Colors & Sizes and Variant Info
@@ -1023,26 +1184,32 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
       }
 
       // 3. Resolve Category Hierarchy
-      List<String> categoryIds = [];
-      String? leafCategoryId = _selectedCategory;
+      Set<String> categoryIdsSet = {};
+      String? primaryLeafCategoryId;
       String categoryNameLegacy = 'Unknown';
 
       // Safe hierarchy resolution
       try {
         final allCatsOpt = ref.read(categoriesStreamProvider).valueOrNull;
-        if (allCatsOpt != null && leafCategoryId != null) {
-          final leaf = allCatsOpt.firstWhere((c) => c.id == leafCategoryId);
-          categoryNameLegacy = leaf.name;
-          categoryIds.add(leaf.id);
-          
-          String? currentParentId = leaf.parentId;
-          while (currentParentId != null) {
-            categoryIds.add(currentParentId);
-            try {
-              final parent = allCatsOpt.firstWhere((c) => c.id == currentParentId);
-              currentParentId = parent.parentId;
-            } catch (_) {
-              break;
+        if (allCatsOpt != null && _selectedCategoryIds.isNotEmpty) {
+          for (final leafCategoryId in _selectedCategoryIds) {
+            final leaf = allCatsOpt.firstWhere((c) => c.id == leafCategoryId);
+            if (primaryLeafCategoryId == null) {
+              primaryLeafCategoryId = leaf.id;
+              categoryNameLegacy = leaf.name;
+            }
+
+            categoryIdsSet.add(leaf.id);
+
+            String? currentParentId = leaf.parentId;
+            while (currentParentId != null) {
+              categoryIdsSet.add(currentParentId);
+              try {
+                final parent = allCatsOpt.firstWhere((c) => c.id == currentParentId);
+                currentParentId = parent.parentId;
+              } catch (_) {
+                break;
+              }
             }
           }
         }
@@ -1057,9 +1224,9 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
           shopId: widget.shop.id,
           name: _name.text.trim(),
           brand: _brand.text.trim(),
-          category: _selectedCategory ?? '',
-          categoryId: leafCategoryId,
-          categoryIds: categoryIds,
+          category: categoryNameLegacy,
+          categoryId: primaryLeafCategoryId,
+          categoryIds: categoryIdsSet.toList(),
           availableColors: availableColors.toList(),
           availableSizes: availableSizes.toList(),
           gender: widget.shop.genre == ShopGenre.clothes ? _selectedGender : 'unisex',
@@ -1095,9 +1262,14 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
         );
       }
     } catch (e) {
+      debugPrint('Product save error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${context.l("error") ?? "Xato"}: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('${context.l("error") ?? "Xato"}: $e'), 
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
         );
       }
     } finally {

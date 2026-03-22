@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/twa_service.dart';
+import '../../shared/widgets/loading_widgets.dart';
+import '../../shared/widgets/full_screen_image_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../shared/models/inventory_model.dart';
@@ -89,6 +92,17 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
       final page = _pageController.page?.round() ?? 0;
       if (page != _currentPage) setState(() => _currentPage = page);
     });
+    
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        });
+      }
+    });
   }
 
   @override
@@ -110,6 +124,7 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
       body: Stack(
         children: [
           SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -143,7 +158,7 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
               ],
             ),
           ),
-          _buildAppBar(context),
+          _buildAppBar(context, ref.watch(twaServiceProvider)),
           _buildBottomAction(),
         ],
       ),
@@ -170,24 +185,37 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
             controller: _pageController,
             itemCount: images.length,
             itemBuilder: (context, index) {
-              return Hero(
-                tag: index == 0 ? 'product-${widget.inventory.id}' : 'product-image-$index-${widget.inventory.id}',
-                child: CachedNetworkImage(
-                  imageUrl: images[index],
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image_outlined, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                        const SizedBox(height: 8),
-                        Text(context.l('error_loading_image') ?? 'Rasm yuklanmadi', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
-                      ],
+              return GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => FullScreenImageViewer(
+                        imageUrls: images,
+                        initialIndex: index,
+                        heroTagPrefix: 'product-image-${widget.inventory.id}',
+                      ),
+                    ),
+                  );
+                },
+                child: Hero(
+                  tag: 'product-image-${widget.inventory.id}-$index',
+                  child: CachedNetworkImage(
+                    imageUrl: images[index],
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: const Center(child: CircularProgressIndicator()),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image_outlined, size: 48, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                          const SizedBox(height: 8),
+                          Text(context.l('error_loading_image') ?? 'Rasm yuklanmadi', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -209,11 +237,11 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
     );
   }
 
-  Widget _buildAppBar(BuildContext context) {
+  Widget _buildAppBar(BuildContext context, TWAService twa) {
     return Positioned(
       top: 0, left: 0, right: 0,
       child: Container(
-        height: 100,
+        height: 110, // Increased height for TWA
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -226,32 +254,53 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: Row(
               children: [
-                _CircleNavButton(
-                  icon: Icons.chevron_left,
-                  onTap: () {
-                    if (context.canPop()) {
-                      context.pop();
-                    } else {
-                      context.go('/market');
+                if (!twa.isSupported)
+                  _CircleNavButton(
+                    icon: Icons.chevron_left,
+                    onTap: () {
+                      if (context.canPop()) {
+                        context.pop();
+                      } else {
+                        context.go('/market');
+                      }
+                    },
+                  ),
+                const Spacer(),
+                const SizedBox(width: 8),
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: _CircleNavButton(
+                    icon: Icons.share_outlined,
+                    onTap: () async {
+                    final botUsername = 'tabassum_market_bot';
+                    final telegramUrl = 'https://t.me/$botUsername?startapp=product_${widget.inventory.id}';
+                    final text = Uri.encodeComponent('Men ajoyib mahsulot topdim! 😎\nKo\'rib chiqing:');
+                    
+                    final shareUrl = Uri.parse('https://t.me/share/url?url=$telegramUrl&text=$text');
+                    
+                    try {
+                      if (await canLaunchUrl(shareUrl)) {
+                        await launchUrl(shareUrl, mode: LaunchMode.externalApplication);
+                      } else {
+                        Clipboard.setData(ClipboardData(text: telegramUrl));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Havola nusxalandi!'), behavior: SnackBarBehavior.floating),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      Clipboard.setData(ClipboardData(text: telegramUrl));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Havola nusxalandi!'), behavior: SnackBarBehavior.floating),
+                        );
+                      }
                     }
                   },
                 ),
-                const Spacer(),
-                const SizedBox(width: 8),
-                _CircleNavButton(
-                  icon: Icons.share_outlined,
-                  onTap: () {
-                    final link = 'https://tabassum.uz/product/${widget.inventory.id}';
-                    Clipboard.setData(ClipboardData(text: link));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(context.l('shop_updated') ?? 'Havola nusxalandi!'), // Fallback text
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                ),
-              ],
+              ),
+            ],
             ),
           ),
         ),
@@ -498,7 +547,9 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
             trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
             onTap: () async {
               String handle = telegram.replaceAll('https://t.me/', '').replaceAll('t.me/', '').replaceAll('@', '');
-              final message = Uri.encodeComponent('Assalomu alaykum! Men Tabassum ilovasida ko\'rgan mana bu mahsulotingizga qiziqib qoldim: ${widget.inventory.name}\n\nHavola: https://tabssum.app/marketplace/product/${widget.inventory.id}');
+              final botUsername = 'tabassum_market_bot';
+              final appLink = 'https://t.me/$botUsername/app?startapp=product_${widget.inventory.id}';
+              final message = Uri.encodeComponent('Assalomu alaykum! Men Tabassum ilovasida ko\'rgan mana bu mahsulotingizga qiziqib qoldim: ${widget.inventory.name}\n\nHavola: $appLink');
               final uri = Uri.parse('https://t.me/$handle?text=$message');
               
               if (await canLaunchUrl(uri)) {
@@ -664,7 +715,7 @@ class _ReviewsSection extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                ...comments.map((c) => Container(
+                ...comments.take(3).map((c) => Container(
                       margin: const EdgeInsets.only(bottom: 12),
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -703,6 +754,23 @@ class _ReviewsSection extends ConsumerWidget {
                         ],
                       ),
                     )),
+                if (comments.length > 3) ...[
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () => _showAllCommentsSheet(context, comments.cast<CommentModel>().toList()),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'Barcha ${comments.length} ta sharhni ko\'rish',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             );
           },
@@ -775,6 +843,79 @@ class _ReviewsSection extends ConsumerWidget {
           )),
         ),
       ],
+    );
+  }
+
+  void _showAllCommentsSheet(BuildContext context, List<CommentModel> comments) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.85,
+        decoration: BoxDecoration(
+          color: Theme.of(ctx).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(width: 40, height: 5, decoration: BoxDecoration(color: Theme.of(ctx).colorScheme.onSurfaceVariant.withOpacity(0.3), borderRadius: BorderRadius.circular(3))),
+            const SizedBox(height: 20),
+            Text('Barcha sharhlar (${comments.length})', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 16),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(24),
+                itemCount: comments.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
+                itemBuilder: (ctx, i) {
+                  final c = comments[i];
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Theme.of(context).colorScheme.outline.withOpacity(0.15)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 12,
+                              backgroundColor: Theme.of(context).colorScheme.surface,
+                              child: Text(
+                                c.userName.isNotEmpty ? c.userName[0].toUpperCase() : 'A',
+                                style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.primary),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(child: Text(c.userName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13))),
+                            Row(
+                              children: List.generate(5, (index) => Icon(
+                                Icons.star_rounded,
+                                size: 14,
+                                color: index < c.rating ? const Color(0xFFFBBF24) : Theme.of(context).colorScheme.surfaceContainerHighest,
+                              )),
+                            ),
+                          ],
+                        ),
+                        if (c.comment.isNotEmpty) ...[
+                          const SizedBox(height: 12),
+                          Text(c.comment, style: TextStyle(fontSize: 13, height: 1.5, color: Theme.of(context).colorScheme.onSurface)),
+                        ],
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

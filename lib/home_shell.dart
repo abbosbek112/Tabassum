@@ -66,7 +66,7 @@ class HomeShell extends ConsumerWidget {
               child: LinearProgressIndicator(minHeight: 2),
             ),
           // Floating nav bar pinned to bottom
-          if (isTopLevel)
+          if (isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
             Positioned(
               left: 16,
               right: 16,

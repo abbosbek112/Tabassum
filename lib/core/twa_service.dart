@@ -26,6 +26,9 @@ extension type WebApp(JSObject _) implements JSObject {
   @JS('HapticFeedback')
   external TWAHapticFeedback get hapticFeedback;
 
+  @JS('initData')
+  external String get initData;
+
   @JS('initDataUnsafe')
   external WebAppInitData get initDataUnsafe;
 
@@ -36,6 +39,9 @@ extension type WebApp(JSObject _) implements JSObject {
 extension type WebAppInitData(JSObject _) implements JSObject {
   @JS('user')
   external WebAppUser? get user;
+  
+  @JS('start_param')
+  external String? get startParam;
 }
 
 extension type WebAppUser(JSObject _) implements JSObject {
@@ -115,6 +121,23 @@ class TWAService extends ChangeNotifier {
   }
 
   bool get isSupported => _telegram != null && _webApp != null;
+
+  String? get startParam {
+    try {
+      return _webApp?.initDataUnsafe.startParam;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? get initData {
+    try {
+      if (!isSupported) return null;
+      return _webApp?.initData;
+    } catch (_) {
+      return null;
+    }
+  }
 
   void expand() {
     try {

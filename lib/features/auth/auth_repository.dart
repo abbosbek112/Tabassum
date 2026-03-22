@@ -28,11 +28,17 @@ class AuthRepository {
   Stream<User?> authStateChanges() => auth.authStateChanges();
 
   /// Step 1: Check if user exists and login directly
-  Future<bool> telegramLogin({required String telegramId}) async {
+  Future<bool> telegramLogin({required String telegramId, required String initData}) async {
     final response = await http.post(
       Uri.parse('$_botBaseUrl/telegram-login'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'telegramId': telegramId}),
+      body: jsonEncode({
+        'telegramId': telegramId,
+        'initData': initData,
+      }),
+    ).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => throw Exception('Server vaqt tugadi. Qayta urinib ko\'ring...'),
     );
 
     final data = jsonDecode(response.body);
@@ -53,6 +59,7 @@ class AuthRepository {
   /// Step 2: If user doesn't exist, register with extra fields
   Future<void> telegramRegister({
     required String telegramId,
+    required String initData,
     required String name,
     String surname = '',
     required int age,
@@ -62,10 +69,14 @@ class AuthRepository {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'telegramId': telegramId,
+        'initData': initData,
         'name': name,
         'surname': surname,
         'age': age,
       }),
+    ).timeout(
+      const Duration(seconds: 20),
+      onTimeout: () => throw Exception('Server vaqt tugadi. Qayta urinib ko\'ring...'),
     );
 
     final data = jsonDecode(response.body);
@@ -104,11 +115,13 @@ class AuthRepository {
     String? displayName,
     String? phoneNumber,
     String? address,
+    String? telegramUsername,
   }) async {
     final Map<String, dynamic> data = {};
     if (displayName != null && displayName.isNotEmpty) data['displayName'] = displayName;
     if (phoneNumber != null && phoneNumber.isNotEmpty)  data['phoneNumber'] = phoneNumber;
     if (address != null && address.isNotEmpty)          data['address'] = address;
+    if (telegramUsername != null && telegramUsername.isNotEmpty) data['telegramUsername'] = telegramUsername;
 
     if (data.isNotEmpty) {
       await db.collection(FirestoreCollections.users).doc(uid).update(data);

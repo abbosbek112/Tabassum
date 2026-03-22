@@ -26,9 +26,12 @@ class ProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(
-          context.l('profile') ?? 'Profil',
-          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -1.0)
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(
+            context.l('profile') ?? 'Profil',
+            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: -1.0)
+          ),
         ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
@@ -1225,7 +1228,7 @@ class _EditShopSheetState extends ConsumerState<_EditShopSheet> {
     );
   }
 
-  Widget _buildInput(String label, TextEditingController ctrl, IconData icon, {int maxLines = 1}) {
+  Widget _buildInput(String label, TextEditingController ctrl, IconData icon, {int maxLines = 1, TextInputType? keyboardType}) {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).dividerColor.withOpacity(0.08),
@@ -1235,6 +1238,8 @@ class _EditShopSheetState extends ConsumerState<_EditShopSheet> {
       child: TextField(
         controller: ctrl,
         maxLines: maxLines,
+        keyboardType: keyboardType,
+        enableInteractiveSelection: true,
         decoration: InputDecoration(
           icon: Icon(icon, color: Theme.of(context).textTheme.bodySmall?.color, size: 20),
           labelText: label,

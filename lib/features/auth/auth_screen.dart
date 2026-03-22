@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/localization.dart';
 import '../../core/twa_service.dart';
 import 'auth_controller.dart';
+import 'auth_repository.dart';
 
 // ─── Design Tokens ──────────────────────────────────────────────────────────
 const _primary     = Color(0xFF0F172A);
@@ -33,7 +35,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   final _ageCtrl     = TextEditingController();
 
   String _telegramId = '';
-  bool _isCheckingLogin = true; 
+  bool _isCheckingLogin = true;
+  String? _errorMessage;
 
   @override
   void initState() {
@@ -46,19 +49,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   Future<void> _initAuthFlow() async {
     try {
       final twa = ref.read(twaServiceProvider);
-      final id  = twa.telegramUserId?.toString();
+      String? id = twa.telegramUserId?.toString();
+      final initData = twa.initData;
+
+      // Fallback: If TWA id is missing (desktop reload) but we are authenticated
+      if (id == null || id.isEmpty) {
+        final currentFirebaseUser = FirebaseAuth.instance.currentUser;
+        if (currentFirebaseUser != null && currentFirebaseUser.uid.startsWith('tg_')) {
+          id = currentFirebaseUser.uid.replaceFirst('tg_', '');
+        }
+      }
       
       if (id != null && id.isNotEmpty) {
-        setState(() => _telegramId = id);
+        setState(() => _telegramId = id!);
         
-        // Attempt direct login
-        final needsRegistration = await ref.read(authControllerProvider.notifier).telegramLogin(telegramId: id);
+        // If we don't have initData (e.g. session reload), we can't call telegramLogin (which validates)
+        // But the router only sent us here if profile is missing. 
+        // If we have an active session, but no profile, and No initData (can't validate),
+        // we should just show the registration form.
         
-        if (needsRegistration) {
-          // Stay on this screen, stop loading, show form
-          if (mounted) setState(() => _isCheckingLogin = false);
+        if (initData == null || initData.isEmpty) {
+          // Already have firebase session? Let's check profile again.
+          final profile = ref.read(authStateProvider).user; 
+          if (profile == null) {
+            // No profile + No way to validate initData = just show the form
+            if (mounted) setState(() => _isCheckingLogin = false);
+            return;
+          }
+        }
+
+        // Attempt direct login / validation if we have initData
+        if (initData != null && initData.isNotEmpty) {
+          final needsRegistration = await ref.read(authControllerProvider.notifier).telegramLogin(
+            telegramId: id,
+            initData: initData,
+          );
+          
+          if (needsRegistration) {
+            if (mounted) setState(() => _isCheckingLogin = false);
+          }
+          // Else: Logged in! _RouterRefreshNotifier will redirect
         } else {
-          // Logged in! _RouterRefreshNotifier will redirect
+          // Fallback if authenticated but somehow arrived here
+          if (mounted) setState(() => _isCheckingLogin = false);
         }
       } else {
         // No telegram ID found (e.g. testing in browser)
@@ -69,8 +102,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _isCheckingLogin = false);
-        _snack('Xatolik: $e');
+        setState(() {
+          _isCheckingLogin = false;
+          _errorMessage = e.toString().replaceAll('Exception: ', '');
+        });
       }
     }
   }
@@ -101,12 +136,31 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       return;
     }
 
+    final twa = ref.read(twaServiceProvider);
+    final initData = twa.initData;
+    final telegramUsername = twa.telegramUser?.username ?? '';
+
+    if (initData == null || initData.isEmpty) {
+      _snack('Telegram initData topilmadi!');
+      return;
+    }
+
     await ref.read(authControllerProvider.notifier).telegramRegister(
       telegramId: _telegramId, 
+      initData: initData,
       name: name, 
       surname: surname, 
-      age: age
+      age: age,
     );
+
+    // After successful registration, update the profile with telegramUsername
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser != null && telegramUsername.isNotEmpty) {
+      await ref.read(authRepositoryProvider).updateProfile(
+        uid: firebaseUser.uid,
+        telegramUsername: telegramUsername,
+      );
+    }
 
     final err = ref.read(authControllerProvider).error;
     if (err != null && mounted) {
@@ -140,7 +194,49 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _buildBackground(w),
           
           if (_isCheckingLogin)
-            const Center(child: CircularProgressIndicator(color: _accent))
+            Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(color: _accent),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Tabassum ga ulanmoqda...',
+                    style: TextStyle(color: _textSecondary, fontSize: 14),
+                  ),
+                ],
+              ),
+            )
+          else if (_errorMessage != null)
+            Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off, size: 56, color: Color(0xFFEF4444)),
+                    const SizedBox(height: 16),
+                    Text(
+                      _errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: _textSecondary, fontSize: 15),
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _isCheckingLogin = true;
+                          _errorMessage = null;
+                        });
+                        _initAuthFlow();
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Qayta urinish'),
+                    ),
+                  ],
+                ),
+              ),
+            )
           else
             SafeArea(
               child: SingleChildScrollView(
@@ -351,6 +447,7 @@ class _Field extends StatelessWidget {
       inputFormatters: formatters,
       maxLength: maxLength,
       enabled: enabled,
+      enableInteractiveSelection: true,
       style: const TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.w600,

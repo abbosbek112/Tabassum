@@ -9,6 +9,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../core/constants.dart';
+import '../../core/shared_providers.dart';
+import '../../core/twa_service.dart';
 import '../../core/localization.dart';
 import '../auth/auth_controller.dart';
 import '../../shared/models/shop_model.dart';
@@ -250,6 +252,7 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
             SizedBox(
               height: 110,
               child: ListView.separated(
+                physics: const BouncingScrollPhysics(),
                 scrollDirection: Axis.horizontal,
                 itemCount: newShops.length,
                 separatorBuilder: (_, __) => const SizedBox(width: 16),
@@ -595,51 +598,100 @@ class _FeaturedShopCard extends ConsumerWidget {
 }
 
 
-class ShopDetailScreen extends ConsumerWidget {
+class ShopDetailScreen extends ConsumerStatefulWidget {
   final String shopId;
   const ShopDetailScreen({super.key, required this.shopId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final shopAsync = ref.watch(_shopProvider(shopId));
-    final inventoryAsync = ref.watch(_inventoryByShopProvider(shopId));
+  ConsumerState<ShopDetailScreen> createState() => _ShopDetailScreenState();
+}
+
+class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final shopAsync = ref.watch(_shopProvider(widget.shopId));
+    final inventoryAsync = ref.watch(_inventoryByShopProvider(widget.shopId));
     final currentUser = ref.watch(currentUserProfileProvider).valueOrNull;
+    final twa = ref.watch(twaServiceProvider);
 
     return shopAsync.when(
       data: (shop) {
         if (shop == null) return Scaffold(body: Center(child: Text(context.l('no_products_found'))));
         final isOwner = currentUser?.uid == shop.ownerId;
+        
+        // Dynamic subscription check
+        final subscriptionActive = ref.watch(subscriptionActiveProvider(widget.shopId)).valueOrNull ?? false;
+        final hideProducts = !subscriptionActive && !isOwner;
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
             slivers: [
-              _buildUltimateSliverAppBar(context, shop, isOwner, ref),
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        context.l('products'),
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                          borderRadius: BorderRadius.circular(100),
+              _buildUltimateSliverAppBar(context, shop, isOwner, ref, twa),
+              if (hideProducts)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 40),
+                    child: Column(
+                      children: [
+                        Icon(Icons.lock_outline_rounded, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                        const SizedBox(height: 24),
+                        Text(
+                          context.l('shop_closed') ?? 'Do\'kon vaqtincha yopiq',
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
                         ),
-                        child: Text(
-                          shop.genre.label,
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                        const SizedBox(height: 12),
+                        Text(
+                          context.l('shop_inactive_desc') ?? 'Sotuvchining obunasi tugaganligi sababli do\'kon vaqtincha yopilgan.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+                )
+              else ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          context.l('products'),
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(100),
+                          ),
+                          child: Text(
+                            shop.genre.label,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+              ],
               inventoryAsync.when(
                 data: (items) {
                   if (items.isEmpty) {
@@ -766,26 +818,28 @@ class ShopDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildUltimateSliverAppBar(BuildContext context, ShopModel shop, bool isOwner, WidgetRef ref) {
+  Widget _buildUltimateSliverAppBar(BuildContext context, ShopModel shop, bool isOwner, WidgetRef ref, TWAService twa) {
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       elevation: 0,
-      leading: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
-          child: IconButton(
-            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
-            onPressed: () => context.pop(),
+      leading: twa.isSupported 
+        ? const SizedBox.shrink() 
+        : Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: CircleAvatar(
+              backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
+              child: IconButton(
+                icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
+                onPressed: () => context.pop(),
+              ),
+            ),
           ),
-        ),
-      ),
       actions: [
         if (isOwner)
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: const EdgeInsets.only(top: 8, right: 16),
             child: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
               child: IconButton(

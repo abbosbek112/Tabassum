@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/constants.dart';
@@ -12,9 +14,7 @@ import '../auth/models/user_model.dart';
 import '../auth/auth_repository.dart';
 import '../auth/auth_controller.dart';
 import '../../core/localization.dart';
-
-// ─── Admin PIN (o'zingiznikini qo'ying) ──────────────────────────────────────
-const _adminPin = '1234'; 
+import '../../core/twa_service.dart';
 
 // ─── Provider: all users stream ──────────────────────────────────────────────
 final _allUsersStreamProvider = StreamProvider<List<UserModel>>((ref) {
@@ -42,23 +42,16 @@ final _allHistoryStreamProvider = StreamProvider<List<SubscriptionHistoryModel>>
 });
 
 // ─── Admin Screen ─────────────────────────────────────────────────────────────
-class AdminScreen extends ConsumerStatefulWidget {
+class AdminScreen extends ConsumerWidget {
   const AdminScreen({super.key});
 
   @override
-  ConsumerState<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends ConsumerState<AdminScreen> {
-  bool _pinVerified = false;
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(authStateProvider).user;
     final isAdmin = user?.role == UserRole.admin;
     
-    if (!_pinVerified && !isAdmin) {
-      return _PinGate(onVerified: () => setState(() => _pinVerified = true));
+    if (!isAdmin) {
+      return _AccessDenied();
     }
     return const DefaultTabController(
       length: 3,
@@ -67,19 +60,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 }
 
-// ─── PIN Gate ───────────────────────────────────────────────────────────────
-class _PinGate extends StatefulWidget {
-  final VoidCallback onVerified;
-  const _PinGate({required this.onVerified});
-
-  @override
-  State<_PinGate> createState() => _PinGateState();
-}
-
-class _PinGateState extends State<_PinGate> {
-  final _controller = TextEditingController();
-  bool _error = false;
-
+// ─── Access Denied ──────────────────────────────────────────────────────────
+class _AccessDenied extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -95,43 +77,30 @@ class _PinGateState extends State<_PinGate> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: cs.primary.withOpacity(0.1),
+                    color: Colors.red.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.admin_panel_settings_rounded, color: cs.primary, size: 40),
+                  child: const Icon(Icons.lock_rounded, color: Colors.red, size: 40),
                 ),
                 const SizedBox(height: 24),
-                Text('Admin Panel', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: cs.onSurface)),
+                Text('Ruxsat yo\'q', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: cs.onSurface)),
                 const SizedBox(height: 8),
-                Text('PIN kodni kiriting', style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.5))),
-                const SizedBox(height: 32),
-                TextField(
-                  controller: _controller,
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  autofocus: true,
+                Text(
+                  'Bu sahifa faqat adminlar uchun.',
+                  style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.5)),
                   textAlign: TextAlign.center,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, letterSpacing: 8),
-                  decoration: InputDecoration(
-                    hintText: '• • • •',
-                    errorText: _error ? 'PIN noto\'g\'ri' : null,
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    filled: true,
-                    fillColor: cs.surfaceContainerLow,
-                  ),
-                  onSubmitted: _verify,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
-                  child: FilledButton(
-                    onPressed: () => _verify(_controller.text),
+                  child: FilledButton.icon(
+                    onPressed: () => context.go('/market'),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text('Kirish', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    icon: const Icon(Icons.arrow_back_rounded),
+                    label: const Text('Asosiy sahifaga qaytish', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                   ),
                 ),
               ],
@@ -141,39 +110,53 @@ class _PinGateState extends State<_PinGate> {
       ),
     );
   }
-
-  void _verify(String value) {
-    if (value == _adminPin) {
-      widget.onVerified();
-    } else {
-      setState(() => _error = true);
-      HapticFeedback.vibrate();
-      _controller.clear();
-    }
-  }
 }
 
+
 // ─── Admin Body ───────────────────────────────────────────────────────────────
-class _AdminBody extends ConsumerWidget {
+class _AdminBody extends ConsumerStatefulWidget {
   const _AdminBody();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AdminBody> createState() => _AdminBodyState();
+}
+
+class _AdminBodyState extends ConsumerState<_AdminBody> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+    final twa = ref.watch(twaServiceProvider);
 
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-              child: Icon(Icons.admin_panel_settings_rounded, color: cs.primary, size: 18),
-            ),
-            const SizedBox(width: 10),
-            const Text('Admin Panel', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-          ],
+        leading: twa.isSupported ? const SizedBox.shrink() : null,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: cs.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                child: Icon(Icons.admin_panel_settings_rounded, color: cs.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              const Text('Admin Panel', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+            ],
+          ),
         ),
         bottom: TabBar(
           indicatorColor: cs.primary,
@@ -1049,10 +1032,30 @@ class _UserListItem extends ConsumerWidget {
                     ),
                   ],
                 ),
+                if (user.phoneNumber.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Icon(Icons.phone_rounded, size: 10, color: cs.primary),
+                        const SizedBox(width: 4),
+                        Text(user.phoneNumber, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: cs.primary)),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          if (user.telegramUsername.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                onPressed: () => launchUrl(Uri.parse('https://t.me/${user.telegramUsername}')),
+                icon: const Icon(Icons.send_rounded, color: Color(0xFF0088CC), size: 20),
+                tooltip: 'Telegram',
+              ),
+            ),
           _RoleToggleButton(user: user),
         ],
       ),

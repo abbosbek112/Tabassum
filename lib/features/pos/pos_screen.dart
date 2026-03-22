@@ -8,6 +8,7 @@ import '../../shared/models/inventory_model.dart';
 import '../../shared/models/variant_model.dart';
 import '../../shared/models/shop_model.dart';
 import '../sales/sales_repository.dart';
+import '../../core/twa_service.dart';
 
 class PosScreen extends ConsumerWidget {
   const PosScreen({super.key});
@@ -46,6 +47,19 @@ class _PosBodyState extends ConsumerState<_PosBody> {
   bool _busy = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _qtyCtrl.dispose();
     _priceCtrl.dispose();
@@ -56,10 +70,16 @@ class _PosBodyState extends ConsumerState<_PosBody> {
   Widget build(BuildContext context) {
     final inventoryAsync = ref.watch(inventoryByShopProvider(widget.shop.id));
 
+    final twa = ref.watch(twaServiceProvider);
+
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Text(context.l('pos') ?? 'POS', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
+        leading: twa.isSupported ? const SizedBox.shrink() : null,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(context.l('pos') ?? 'POS', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
+        ),
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
@@ -215,6 +235,7 @@ class _PosBodyState extends ConsumerState<_PosBody> {
                                 variantId: _selectedVariant!.id,
                                 quantity: qty,
                                 price: price,
+                                ownerId: widget.shop.ownerId,
                               );
                           
                           if (!mounted) return;

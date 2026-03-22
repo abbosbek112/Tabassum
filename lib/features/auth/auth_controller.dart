@@ -97,17 +97,18 @@ class AuthController extends AsyncNotifier<void> {
 
   AuthRepository get _repo => ref.read(authRepositoryProvider);
 
-  Future<bool> telegramLogin({required String telegramId}) async {
+  Future<bool> telegramLogin({required String telegramId, required String initData}) async {
     state = const AsyncLoading();
     bool needsRegistration = false;
     state = await AsyncValue.guard(() async {
-      needsRegistration = await _repo.telegramLogin(telegramId: telegramId);
+      needsRegistration = await _repo.telegramLogin(telegramId: telegramId, initData: initData);
     });
     return needsRegistration;
   }
 
   Future<void> telegramRegister({
     required String telegramId,
+    required String initData,
     required String name,
     String surname = '',
     required int age,
@@ -116,6 +117,7 @@ class AuthController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await _repo.telegramRegister(
         telegramId: telegramId,
+        initData: initData,
         name: name,
         surname: surname,
         age: age,

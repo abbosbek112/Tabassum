@@ -1,0 +1,205 @@
+Resolving dependencies...
+Downloading packages...
+  _flutterfire_internals 1.3.59 (1.3.67 available)
+  cloud_firestore 5.6.12 (6.1.3 available)
+  cloud_firestore_platform_interface 6.6.12 (7.0.7 available)
+  cloud_firestore_web 4.4.12 (5.1.3 available)
+  firebase_auth 5.7.0 (6.2.0 available)
+  firebase_auth_platform_interface 7.7.3 (8.1.7 available)
+  firebase_auth_web 5.15.3 (6.1.3 available)
+  firebase_core 3.15.2 (4.5.0 available)
+  firebase_core_web 2.24.1 (3.5.0 available)
+  firebase_storage 12.4.10 (13.1.0 available)
+  firebase_storage_platform_interface 5.2.10 (5.2.18 available)
+  firebase_storage_web 3.10.17 (3.11.3 available)
+  fl_chart 1.1.1 (1.2.0 available)
+  flutter_lints 5.0.0 (6.0.0 available)
+  flutter_riverpod 2.6.1 (3.3.1 available)
+  go_router 14.8.1 (17.1.0 available)
+  google_sign_in 6.3.0 (7.2.0 available)
+  google_sign_in_android 6.2.1 (7.2.9 available)
+  google_sign_in_ios 5.9.0 (6.3.0 available)
+  google_sign_in_platform_interface 2.5.0 (3.1.0 available)
+  google_sign_in_web 0.12.4+4 (1.1.3 available)
+  intl 0.19.0 (0.20.2 available)
+  js 0.7.2 (discontinued)
+  lints 5.1.1 (6.1.0 available)
+  meta 1.17.0 (1.18.2 available)
+  native_toolchain_c 0.17.5 (0.17.6 available)
+  riverpod 2.6.1 (3.2.1 available)
+  sqflite_android 2.4.2+2 (2.4.2+3 available)
+  test_api 0.7.10 (0.7.11 available)
+  vector_math 2.2.0 (2.3.0 available)
+Got dependencies!
+1 package is discontinued.
+29 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Compiling lib/main.dart for the Web...                          
+Wasm dry run succeeded. Consider building and testing your application with the `--wasm` flag. See docs for more info: https://docs.flutter.dev/platform-integration/web/wasm
+Use --no-wasm-dry-run to disable these warnings.
+Target dart2js failed: ProcessException: Process exited abnormally with exit code 1:
+lib/features/marketplace/product_screen.dart:269:24:
+Error: Can't find ')' to match '('.
+                Padding(
+                       ^
+lib/features/pos/sales_reports_screen.dart:262:2:
+Error: Expected a declaration, but got '}'.
+}}
+ ^
+lib/features/pos/sales_reports_screen.dart:263:1:
+Error: Expected a declaration, but got '}'.
+}
+^
+lib/features/marketplace/shop_screen.dart:819:104:
+Error: Type 'TWAService' not found.
+  Widget _buildUltimateSliverAppBar(BuildContext context, ShopModel shop, bool isOwner, WidgetRef ref, TWAService twa) {
+                                                                                          ^^^^^^^^^^
+lib/features/marketplace/product_screen.dart:239:45:
+Error: Type 'TWAService' not found.
+  Widget _buildAppBar(BuildContext context, TWAService twa) {
+                                            ^^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:103:50:
+Error: Type 'ShopModel' not found.
+  Widget _buildReportsBody(BuildContext context, ShopModel shop, AsyncValue<QuerySnapshot<Map<String, dynamic>>> salesAsync) {
+                                                 ^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:231:30:
+Error: Type 'ShopModel' not found.
+  Widget _buildBlockedScreen(ShopModel shop) {
+                             ^^^^^^^^^
+lib/features/auth/auth_screen.dart:158:22:
+Error: The getter 'authRepositoryProvider' isn't defined for the type '_AuthScreenState'.
+ - '_AuthScreenState' is from 'package:tabassum_app/features/auth/auth_screen.dart' ('lib/features/auth/auth_screen.dart').
+      await ref.read(authRepositoryProvider).updateProfile(
+                     ^^^^^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/shop_screen.dart:612:28:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_ShopDetailScreenState'.
+ - '_ShopDetailScreenState' is from 'package:tabassum_app/features/marketplace/shop_screen.dart' ('lib/features/marketplace/shop_screen.dart').
+      final twa = ref.read(twaServiceProvider);
+                           ^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/shop_screen.dart:626:27:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_ShopDetailScreenState'.
+ - '_ShopDetailScreenState' is from 'package:tabassum_app/features/marketplace/shop_screen.dart' ('lib/features/marketplace/shop_screen.dart').
+    final twa = ref.watch(twaServiceProvider);
+                          ^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/shop_screen.dart:634:46:
+Error: The method 'subscriptionActiveProvider' isn't defined for the type '_ShopDetailScreenState'.
+ - '_ShopDetailScreenState' is from 'package:tabassum_app/features/marketplace/shop_screen.dart' ('lib/features/marketplace/shop_screen.dart').
+        final subscriptionActive = ref.watch(subscriptionActiveProvider(widget.shopId)).valueOrNull ?? false;
+                                             ^^^^^^^^^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/shop_screen.dart:819:104:
+Error: 'TWAService' isn't a type.
+  Widget _buildUltimateSliverAppBar(BuildContext context, ShopModel shop, bool isOwner, WidgetRef ref, TWAService twa) {
+                                                                                          ^^^^^^^^^^
+lib/features/marketplace/product_screen.dart:96:28:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_InventoryBodyState'.
+ - '_InventoryBodyState' is from 'package:tabassum_app/features/marketplace/product_screen.dart' ('lib/features/marketplace/product_screen.dart').
+      final twa = ref.read(twaServiceProvider);
+                           ^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/product_screen.dart:160:43:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_InventoryBodyState'.
+ - '_InventoryBodyState' is from 'package:tabassum_app/features/marketplace/product_screen.dart' ('lib/features/marketplace/product_screen.dart').
+          _buildAppBar(context, ref.watch(twaServiceProvider)),
+                                          ^^^^^^^^^^^^^^^^^^
+lib/features/marketplace/product_screen.dart:239:45:
+Error: 'TWAService' isn't a type.
+  Widget _buildAppBar(BuildContext context, TWAService twa) {
+                                            ^^^^^^^^^^
+lib/features/pos/pos_screen.dart:52:28:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_PosBodyState'.
+ - '_PosBodyState' is from 'package:tabassum_app/features/pos/pos_screen.dart' ('lib/features/pos/pos_screen.dart').
+      final twa = ref.read(twaServiceProvider);
+                           ^^^^^^^^^^^^^^^^^^
+lib/features/pos/pos_screen.dart:72:27:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_PosBodyState'.
+ - '_PosBodyState' is from 'package:tabassum_app/features/pos/pos_screen.dart' ('lib/features/pos/pos_screen.dart').
+    final twa = ref.watch(twaServiceProvider);
+                          ^^^^^^^^^^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:25:28:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_SalesReportsScreenState'.
+ - '_SalesReportsScreenState' is from 'package:tabassum_app/features/pos/sales_reports_screen.dart' ('lib/features/pos/sales_reports_screen.dart').
+      final twa = ref.read(twaServiceProvider);
+                           ^^^^^^^^^^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:36:33:
+Error: The getter 'authStateProvider' isn't defined for the type '_SalesReportsScreenState'.
+ - '_SalesReportsScreenState' is from 'package:tabassum_app/features/pos/sales_reports_screen.dart' ('lib/features/pos/sales_reports_screen.dart').
+    final authState = ref.watch(authStateProvider);
+                                ^^^^^^^^^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:38:27:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_SalesReportsScreenState'.
+ - '_SalesReportsScreenState' is from 'package:tabassum_app/features/pos/sales_reports_screen.dart' ('lib/features/pos/sales_reports_screen.dart').
+    final twa = ref.watch(twaServiceProvider);
+                          ^^^^^^^^^^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:103:50:
+Error: 'ShopModel' isn't a type.
+  Widget _buildReportsBody(BuildContext context, ShopModel shop, AsyncValue<QuerySnapshot<Map<String, dynamic>>> salesAsync) {
+                                                 ^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:231:30:
+Error: 'ShopModel' isn't a type.
+  Widget _buildBlockedScreen(ShopModel shop) {
+                             ^^^^^^^^^
+lib/features/pos/sales_reports_screen.dart:253:40:
+Error: The method 'push' isn't defined for the type 'BuildContext'.
+ - 'BuildContext' is from 'package:flutter/src/widgets/framework.dart' ('../../../snap/flutter/common/flutter/packages/flutter/lib/src/widgets/framework.dart').
+              onPressed: () => context.push('/subscription/${shop.id}'),
+                                       ^^^^
+lib/features/seller/inventory_detail_screen.dart:218:59:
+Error: The getter 'inventoryId' isn't defined for the type '_InventoryDetailScreenState'.
+ - '_InventoryDetailScreenState' is from 'package:tabassum_app/features/seller/inventory_detail_screen.dart' ('lib/features/seller/inventory_detail_screen.dart').
+            builder: (_) => _AddVariantSheet(inventoryId: inventoryId),
+                                                          ^^^^^^^^^^^
+lib/features/admin/admin_screen.dart:128:28:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_AdminBodyState'.
+ - '_AdminBodyState' is from 'package:tabassum_app/features/admin/admin_screen.dart' ('lib/features/admin/admin_screen.dart').
+      final twa = ref.read(twaServiceProvider);
+                           ^^^^^^^^^^^^^^^^^^
+lib/features/admin/admin_screen.dart:140:27:
+Error: The getter 'twaServiceProvider' isn't defined for the type '_AdminBodyState'.
+ - '_AdminBodyState' is from 'package:tabassum_app/features/admin/admin_screen.dart' ('lib/features/admin/admin_screen.dart').
+    final twa = ref.watch(twaServiceProvider);
+                          ^^^^^^^^^^^^^^^^^^
+Error: Compilation failed.
+  Command: /home/abbos/snap/flutter/common/flutter/bin/cache/dart-sdk/bin/dart compile js --platform-binaries=/home/abbos/snap/flutter/common/flutter/bin/cache/flutter_web_sdk/kernel --invoker=flutter_tool -Ddart.vm.product=true -DFLUTTER_VERSION=3.41.4 -DFLUTTER_CHANNEL=stable -DFLUTTER_GIT_URL=https://github.com/flutter/flutter.git -DFLUTTER_FRAMEWORK_REVISION=ff37bef603 -DFLUTTER_ENGINE_REVISION=e4b8dca3f1 -DFLUTTER_DART_VERSION=3.11.1 -DFLUTTER_WEB_USE_SKIA=true -DFLUTTER_WEB_USE_SKWASM=false -DFLUTTER_WEB_CANVASKIT_URL=https://www.gstatic.com/flutter-canvaskit/e4b8dca3f1b4ede4c30371002441c88c12187ed6/ --native-null-assertions --no-source-maps -O4 --minify -o /home/abbos/Downloads/Tabassum/tabassum_app/.dart_tool/flutter_build/344331cd41b58a0a824df920fe6af9d7/app.dill --packages=/home/abbos/Downloads/Tabassum/tabassum_app/.dart_tool/package_config.json --cfe-only /home/abbos/Downloads/Tabassum/tabassum_app/.dart_tool/flutter_build/344331cd41b58a0a824df920fe6af9d7/main.dart
+#0      RunResult.throwException (package:flutter_tools/src/base/process.dart:153:5)
+#1      _DefaultProcessUtils.run (package:flutter_tools/src/base/process.dart:379:19)
+<asynchronous suspension>
+#2      Dart2JSTarget.build (package:flutter_tools/src/build_system/targets/web.dart:208:5)
+<asynchronous suspension>
+#3      _BuildInstance._invokeInternal (package:flutter_tools/src/build_system/build_system.dart:937:9)
+<asynchronous suspension>
+#4      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#5      _BuildInstance.invokeTarget (package:flutter_tools/src/build_system/build_system.dart:875:32)
+<asynchronous suspension>
+#6      Future.wait.<anonymous closure> (dart:async/future.dart:546:21)
+<asynchronous suspension>
+#7      _BuildInstance.invokeTarget (package:flutter_tools/src/build_system/build_system.dart:875:32)
+<asynchronous suspension>
+#8      FlutterBuildSystem.build (package:flutter_tools/src/build_system/build_system.dart:684:16)
+<asynchronous suspension>
+#9      WebBuilder.buildWeb (package:flutter_tools/src/web/compile.dart:107:34)
+<asynchronous suspension>
+#10     BuildWebCommand.runCommand (package:flutter_tools/src/commands/build_web.dart:300:5)
+<asynchronous suspension>
+#11     FlutterCommand.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command.dart:1590:27)
+<asynchronous suspension>
+#12     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#13     CommandRunner.runCommand (package:args/command_runner.dart:212:13)
+<asynchronous suspension>
+#14     FlutterCommandRunner.runCommand.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:496:9)
+<asynchronous suspension>
+#15     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#16     FlutterCommandRunner.runCommand (package:flutter_tools/src/runner/flutter_command_runner.dart:431:5)
+<asynchronous suspension>
+#17     FlutterCommandRunner.run.<anonymous closure> (package:flutter_tools/src/runner/flutter_command_runner.dart:307:33)
+<asynchronous suspension>
+#18     run.<anonymous closure>.<anonymous closure> (package:flutter_tools/runner.dart:104:11)
+<asynchronous suspension>
+#19     AppContext.run.<anonymous closure> (package:flutter_tools/src/base/context.dart:154:19)
+<asynchronous suspension>
+#20     main (package:flutter_tools/executable.dart:103:3)
+<asynchronous suspension>
+
+Compiling lib/main.dart for the Web...                             46.2s
+Error: Failed to compile application for the Web.

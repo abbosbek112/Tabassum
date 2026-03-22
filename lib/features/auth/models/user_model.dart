@@ -7,6 +7,7 @@ class UserModel {
   final String displayName;
   final String phoneNumber;
   final String address;
+  final String telegramUsername;
   final UserRole role;
   final DateTime createdAt;
 
@@ -16,6 +17,7 @@ class UserModel {
     this.displayName = '',
     this.phoneNumber = '',
     this.address = '',
+    this.telegramUsername = '',
     required this.role,
     required this.createdAt,
   });
@@ -27,6 +29,7 @@ class UserModel {
       displayName: (map['displayName'] as String?) ?? '',
       phoneNumber: (map['phoneNumber'] as String?) ?? '',
       address: (map['address'] as String?) ?? '',
+      telegramUsername: (map['telegramUsername'] as String?) ?? '',
       role: UserRole.fromString((map['role'] as String?) ?? 'customer'),
       createdAt: _readDateTime(map['createdAt']),
     );
@@ -37,6 +40,7 @@ class UserModel {
         'displayName': displayName,
         'phoneNumber': phoneNumber,
         'address': address,
+        'telegramUsername': telegramUsername,
         'role': role.asString,
         'createdAt': createdAt,
       };

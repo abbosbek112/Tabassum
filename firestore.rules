@@ -1,0 +1,166 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Functions to check user roles/auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    function isOwner(ownerId) {
+      return isAuthenticated() && request.auth.uid == ownerId;
+    }
+
+    // users collection
+    // Read: Self or Admin
+    // Write: Self (only subset of fields) or Admin
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Allows users to create their own profile, update their own basic details, admins have full access.
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      // Note: Full role protection should theoretically ensure users can't upgrade themselves, 
+      // but in this setup the backend custom claims handles 'role' via custom token based on firestore.
+      // So modifying `role` in firestore modifies their actual role on next token refresh.
+      // We block users from updating their own `role`.
+      allow update: if isAuthenticated() && (isAdmin() || (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])));
+      allow delete: if isAdmin();
+    }
+    
+    // telegram_users collection
+    match /telegram_users/{telegramId} {
+      allow read, write: if isAuthenticated(); // Simplified for now since auth flows read/write this. Future: strict mapping.
+    }
+
+    // shops collection
+    // Read: Everyone
+    // Write: Owner or Admin
+    match /shops/{shopId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isAdmin() || isOwner(resource.data.ownerId)
+        // Allow authenticated clients to update only derived rating fields.
+        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
+      allow delete: if isAdmin() || isOwner(resource.data.ownerId);
+    }
+
+    // inventory collection
+    // Read: Everyone
+    // Write: Shop Owner or Admin. 
+    // Since inventory doesn't store ownerId (only shopId), we have to lookup the shop.
+    match /inventory/{inventoryId} {
+      allow read: if true;
+      // Allow create if the user is the owner of the shop specified in the request
+      allow create: if isAuthenticated() && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerId == request.auth.uid;
+      // Allow update/delete if the user is the owner of the shop specified in the existing resource
+      allow update: if isAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid)
+        // Allow authenticated clients to update only derived rating fields.
+        || (isAuthenticated() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'reviewCount']));
+      allow delete: if isAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid);
+    }
+    
+    // inventory_variants collection
+    match /inventory_variants/{variantId} {
+      allow read: if true;
+      // We lookup the inventory item, then lookup the shop owner.
+      allow create: if isAuthenticated() && get(/databases/$(database)/documents/shops/$(get(/databases/$(database)/documents/inventory/$(request.resource.data.inventoryId)).data.shopId)).data.ownerId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isAuthenticated() && get(/databases/$(database)/documents/shops/$(get(/databases/$(database)/documents/inventory/$(resource.data.inventoryId)).data.shopId)).data.ownerId == request.auth.uid);
+    }
+    
+    // categories collection
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    
+    // subscriptions & subscription_history
+    match /subscriptions/{shopId} {
+      allow read: if isAdmin() || isOwner(shopId); // simplified assumption: shopId == ownerId or shop owner. 
+      allow write: if isAdmin(); // Only admins/backend can alter subscriptions.
+    }
+    match /subscription_history/{recordId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // product_comments collection
+    match /product_comments/{commentId} {
+      allow read: if isAuthenticated();
+
+      // Authenticated user can create their own comment.
+      allow create: if isAuthenticated()
+        // prevent spoofing another userId
+        && request.resource.data.userId == request.auth.uid
+        // Ensure product and shop exist
+        && exists(/databases/$(database)/documents/inventory/$(request.resource.data.productId))
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId))
+        // Ensure comment.shopId matches the inventory's shopId
+        && get(/databases/$(database)/documents/inventory/$(request.resource.data.productId)).data.shopId == request.resource.data.shopId;
+
+      // For now, lock update/delete to admins only.
+      allow update, delete: if isAdmin();
+    }
+
+    // expenses collection
+    match /expenses/{expenseId} {
+      allow read: if isAuthenticated()
+        && exists(/databases/$(database)/documents/shops/$(resource.data.shopId))
+        && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid;
+
+      allow create: if isAuthenticated()
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId))
+        && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerId == request.auth.uid;
+
+      allow update, delete: if isAdmin() || (isAuthenticated()
+        && exists(/databases/$(database)/documents/shops/$(resource.data.shopId))
+        && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid);
+    }
+
+    // notifications collection
+    match /notifications/{notificationId} {
+      // Only owning shop can read.
+      allow read: if isAuthenticated()
+        && (isAdmin()
+            || (exists(/databases/$(database)/documents/shops/$(resource.data.shopId))
+                && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid));
+
+      // Any logged-in user can create notifications for existing shops.
+      allow create: if isAuthenticated()
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId));
+
+      // Shop owner can mark as read (isRead change only).
+      allow update: if isAdmin()
+        || (isAuthenticated()
+            && exists(/databases/$(database)/documents/shops/$(resource.data.shopId))
+            && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']));
+
+      allow delete: if isAdmin();
+    }
+
+    // sales collection (POS + dashboard analytics)
+    match /sales/{saleId} {
+      // Read: only shop owner/admin for this shop's sales.
+      allow read: if isAuthenticated()
+        && (isAdmin() || (resource.data.ownerId == request.auth.uid));
+
+      // Create: shop owner/admin can create sales for their shop.
+      allow create: if isAuthenticated()
+        && exists(/databases/$(database)/documents/shops/$(request.resource.data.shopId))
+        && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerId == request.auth.uid;
+
+      // MVP: lock updates/deletes to admins.
+      allow update, delete: if isAdmin();
+    }
+    
+    // default deny for everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

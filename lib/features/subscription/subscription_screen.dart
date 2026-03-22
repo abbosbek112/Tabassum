@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/twa_service.dart';
 
 import '../../core/shared_providers.dart';
 import '../../core/providers.dart';
@@ -67,6 +68,19 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
   int _selectedPlan = 0;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final uid = ref.watch(firebaseAuthProvider).currentUser?.uid;
     if (uid == null) return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -74,13 +88,18 @@ class _SubscriptionScreenState extends ConsumerState<SubscriptionScreen> {
     final shopsAsync = ref.watch(myShopsProvider(uid));
     final cs = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final twa = ref.watch(twaServiceProvider);
 
     return Scaffold(
       backgroundColor: cs.surface,
       appBar: AppBar(
-        title: const Text(
-          'Obuna',
-          style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.8),
+        leading: twa.isSupported ? const SizedBox.shrink() : null,
+        title: const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'Obuna',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 22, letterSpacing: -0.8),
+          ),
         ),
         backgroundColor: cs.surface,
         elevation: 0,

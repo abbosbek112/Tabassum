@@ -19,6 +19,7 @@ class SalesRepository {
     required String variantId,
     required int quantity,
     required int price,
+    required String ownerId,
   }) async {
     final variantRef = db
         .collection(FirestoreCollections.inventoryVariants)
@@ -44,6 +45,7 @@ class SalesRepository {
         'quantity': quantity,
         'price': price,
         'total': price * quantity,
+        'ownerId': ownerId,
         'createdAt': FieldValue.serverTimestamp(),
       });
     });

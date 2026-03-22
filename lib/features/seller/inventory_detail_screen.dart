@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/constants.dart'; // Added import
+import '../../core/constants.dart';
+import '../../core/twa_service.dart'; // Added import
 
 import 'package:image_picker/image_picker.dart';
 
@@ -14,39 +15,75 @@ import '../marketplace/inventory_repository.dart';
 import '../marketplace/category_repository.dart';
 import '../sales/sales_repository.dart';
 
-class InventoryDetailScreen extends ConsumerWidget {
+class InventoryDetailScreen extends ConsumerStatefulWidget {
   final String inventoryId;
 
   const InventoryDetailScreen({super.key, required this.inventoryId});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final inventoryAsync = ref.watch(singleInventoryProvider(inventoryId));
-    final variantsAsync = ref.watch(variantsByInventoryProvider(inventoryId));
+  ConsumerState<InventoryDetailScreen> createState() => _InventoryDetailScreenState();
+}
+
+class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final twa = ref.read(twaServiceProvider);
+      if (twa.isSupported) {
+        twa.showBackButton(() {
+          if (mounted) Navigator.of(context).pop();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Hide native back button when leaving this screen
+    // Note: Use ref.read here as it's outside the build phase
+    // But since this is a provider, we should be careful.
+    // Actually, it's better to hide it when the screen is popped.
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final inventoryAsync = ref.watch(singleInventoryProvider(widget.inventoryId));
+    final variantsAsync = ref.watch(variantsByInventoryProvider(widget.inventoryId));
+    final twa = ref.watch(twaServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(context.l('manage_variants') ?? 'Manage Variants'),
+        // Hide standard back button if TWA back button is shown
+        leading: twa.isSupported ? const SizedBox.shrink() : null,
+        title: Padding(
+          padding: const EdgeInsets.only(top: 8), // Center better in taller 72px AppBar
+          child: Text(context.l('manage_variants') ?? 'Manage Variants'),
+        ),
         actions: [
           inventoryAsync.when(
             data: (inv) {
               if (inv == null) return const SizedBox.shrink();
-              return Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: () => _confirmDelete(context, ref, inv),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      useRootNavigator: true,
-                      builder: (_) => _EditInventorySheet(inventory: inv),
+              return Padding(
+                padding: const EdgeInsets.only(top: 8, right: 8),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.red),
+                      onPressed: () => _confirmDelete(context, ref, inv),
                     ),
-                  ),
-                ],
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        useRootNavigator: true,
+                        builder: (_) => _EditInventorySheet(inventory: inv),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
             error: (_, __) => const SizedBox.shrink(),
@@ -149,7 +186,7 @@ class InventoryDetailScreen extends ConsumerWidget {
                                       useRootNavigator: true,
                                       builder: (_) => _EditVariantSheet(variant: v),
                                     ),
-                                    onDelete: () => ref.read(inventoryRepositoryProvider).deleteVariant(inventoryId, v.id),
+                                    onDelete: () => ref.read(inventoryRepositoryProvider).deleteVariant(widget.inventoryId, v.id),
                                   );
                                 },
                               ),
@@ -158,7 +195,7 @@ class InventoryDetailScreen extends ConsumerWidget {
                       ),
 
                       // ── Tab 2: Sales History ─────────────────────────
-                      _SalesHistoryTab(inventoryId: inventoryId, inventoryName: inv.name),
+                      _SalesHistoryTab(inventoryId: widget.inventoryId, inventoryName: inv.name),
                     ],
                   ),
                 ),
@@ -178,7 +215,7 @@ class InventoryDetailScreen extends ConsumerWidget {
             context: context,
             isScrollControlled: true,
             useRootNavigator: true,
-            builder: (_) => _AddVariantSheet(inventoryId: inventoryId),
+          builder: (_) => _AddVariantSheet(inventoryId: widget.inventoryId),
           ),
           label: Text(context.l('add_color_variants') ?? 'Add Color Variants', style: const TextStyle(fontWeight: FontWeight.bold)),
           icon: const Icon(Icons.add),

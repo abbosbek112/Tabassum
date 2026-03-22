@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'twa_service.dart';
+
 import '../features/auth/auth_screen.dart';
 import '../features/auth/auth_controller.dart';
 import '../features/marketplace/categories_screen.dart';
@@ -21,10 +23,13 @@ import '../features/admin/admin_screen.dart';
 import '../features/wishlist/wishlist_screen.dart';
 import '../home_shell.dart';
 
+bool _hasHandledStartParam = false;
+
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerRefreshNotifierProvider);
   final authState = ref.watch(authStateProvider);
   final userProfileAsync = ref.watch(currentUserProfileProvider);
+  final twa = ref.read(twaServiceProvider);
 
   return GoRouter(
     initialLocation: '/market',
@@ -41,11 +46,30 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         return isLoggingIn ? null : '/auth';
       }
 
+      final profile = userProfileAsync.valueOrNull;
+      final hasProfile = profile != null;
+
+      // If logged in but profile not loaded yet or errored, keep current route.
+      if (userProfileAsync.isLoading || userProfileAsync.hasError) return null;
+
+      // If authenticated but NO profile in Firestore, force them to /auth (registration)
+      if (authState.isAuthenticated && !hasProfile) {
+        return isLoggingIn ? null : '/auth';
+      }
+
       if (isLoggingIn) return '/market';
 
-      // If logged in but profile not loaded yet, keep current route.
-      if (userProfileAsync.isLoading) return null;
-      // If profile missing, allow app to proceed; seller features will rely on role.
+      // Handle Telegram start_param deep linking right after auth is established
+      if (!_hasHandledStartParam && authState.isAuthenticated && !userProfileAsync.isLoading) {
+        _hasHandledStartParam = true; // only handle once per session
+        final param = twa.startParam;
+        if (param != null && param.startsWith('product_')) {
+          final productId = param.replaceFirst('product_', '');
+          if (productId.isNotEmpty) {
+            return '/market/product/$productId'; // Differentiate the path based on deep link format
+          }
+        }
+      }
 
       return null;
     },

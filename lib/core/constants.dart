@@ -56,7 +56,9 @@ enum ShopGenre {
   perfumery,
   clothes,
   electronics,
-  home;
+  home,
+  jewelry,
+  other;
 
   String get asString => name;
 
@@ -74,6 +76,8 @@ enum ShopGenre {
         ShopGenre.clothes => 'Kiyim-kechak',
         ShopGenre.electronics => 'Elektronika',
         ShopGenre.home => 'Uy va ro\'zg\'or',
+        ShopGenre.jewelry => 'Taqinchoqlar',
+        ShopGenre.other => 'Boshqa',
       };
 }
 
