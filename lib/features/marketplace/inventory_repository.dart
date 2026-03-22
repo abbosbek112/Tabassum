@@ -99,7 +99,10 @@ class InventoryRepository {
         .collection(FirestoreCollections.inventory)
         .where('category', isEqualTo: category)
         .snapshots()
-        .map((q) => q.docs.map((d) => InventoryModel.fromMap(d.id, d.data())).toList());
+        .map((q) => q.docs
+            .map((d) => InventoryModel.fromMap(d.id, d.data()))
+            .where((item) => item.subscriptionActive)
+            .toList());
   }
 
   Stream<List<InventoryModel>> streamInventoryByCategoryId(String categoryId) {

@@ -636,35 +636,43 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
         final subscriptionActive = ref.watch(subscriptionActiveProvider(widget.shopId)).valueOrNull ?? false;
         final hideProducts = !subscriptionActive && !isOwner;
 
+        if (hideProducts) {
+          return Scaffold(
+            appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(40.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.store_outlined, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
+                    const SizedBox(height: 24),
+                    Text(
+                      context.l('shop_not_found'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 24),
+                    TextButton.icon(
+                      onPressed: () => context.go('/market'),
+                      icon: const Icon(Icons.arrow_back),
+                      label: Text(context.l('go_shopping')),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: CustomScrollView(
             physics: const BouncingScrollPhysics(),
             slivers: [
               _buildUltimateSliverAppBar(context, shop, isOwner, ref, twa),
-              if (hideProducts)
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 100, horizontal: 40),
-                    child: Column(
-                      children: [
-                        Icon(Icons.lock_outline_rounded, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-                        const SizedBox(height: 24),
-                        Text(
-                          context.l('shop_closed') ?? 'Do\'kon vaqtincha yopiq',
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          context.l('shop_inactive_desc') ?? 'Sotuvchining obunasi tugaganligi sababli do\'kon vaqtincha yopilgan.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Theme.of(context).textTheme.bodySmall?.color),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
+              if (false) // Removed lock screen UI
+                SliverToBoxAdapter(child: SizedBox.shrink())
               else ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -692,8 +700,9 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                   ),
                 ),
               ],
-              inventoryAsync.when(
-                data: (items) {
+              if (!hideProducts)
+                inventoryAsync.when(
+                  data: (items) {
                   if (items.isEmpty) {
                     return SliverToBoxAdapter(
                       child: Padding(

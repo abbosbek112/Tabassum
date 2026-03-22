@@ -58,6 +58,9 @@ class S {
     'perfumery': 'Parfumeriya',
     'clothes': 'Kiyim-kechak',
     'electronics': 'Elektronika',
+    'shop_closed': 'Do\'kon vaqtincha yopiq',
+    'shop_inactive_desc': 'Do\'kon egasining obuna muddati tugagan.',
+    'shop_not_found': 'Do\'kon topilmadi yoki vaqtincha faol emas.',
     'home': 'Uy va ro\'zg\'or',
     'male': 'Erkak',
     'female': 'Ayol',
@@ -504,6 +507,7 @@ class S {
     'no_products_yet': 'Товаров пока нет',
     'shop_empty_desc': 'В этом магазине пока нет товаров в продаже.',
     'add_first_product': 'ДОБАВИТЬ ТОВАР',
+    'shop_not_found': 'Магазин не найден или временно неактивен.',
   };
 
   static String get(String key, String lang) {

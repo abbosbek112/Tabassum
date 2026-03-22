@@ -105,7 +105,8 @@ class SubscriptionRepository {
 
   Stream<bool> streamIsActive(String shopId) {
     return streamSubscription(shopId).map((s) {
-      if (s == null) return false;
+      // DEFAULT TO TRUE: If no subscription document exists yet, assume the shop is active.
+      if (s == null) return true;
       return s.status == 'active' && s.endDate.isAfter(DateTime.now());
     });
   }
