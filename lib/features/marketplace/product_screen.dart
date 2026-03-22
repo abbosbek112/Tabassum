@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/twa_service.dart';
-import '../../shared/widgets/loading_widgets.dart';
 import '../../shared/widgets/full_screen_image_viewer.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
@@ -117,7 +116,7 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
     final variantsAsync = ref.watch(_variantsStreamProvider(widget.inventory.id));
     final wishedAsync = ref.watch(isWishedProvider(widget.inventory.id));
     final wished = wishedAsync.valueOrNull ?? false;
-    final telegram = shopAsync.valueOrNull?.telegram ?? '';
+    final telegram = shopAsync.value?.telegram ?? '';
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -565,7 +564,7 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
   Widget _buildBottomAction() {
     final price = _selectedVariant?.priceOverride ?? widget.inventory.basePrice;
     final shopAsync = ref.watch(_shopStreamProvider(widget.inventory.shopId));
-    final telegram = shopAsync.valueOrNull?.telegram ?? '';
+    final telegram = shopAsync.value?.telegram ?? '';
 
     return Positioned(
       bottom: 0, left: 0, right: 0,

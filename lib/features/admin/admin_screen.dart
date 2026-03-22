@@ -709,7 +709,7 @@ class _DashboardTab extends ConsumerWidget {
           children: [
             Row(
               children: [
-                Expanded(child: _SummaryCard(title: 'Barcha Foyda', value: NumberFormat.currency(locale: 'uz_UZ', symbol: '', decimalDigits: 0).format(history.fold<int>(0, (sum, item) => sum + item.amount)) + ' so\'m', color: Colors.indigo, icon: Icons.account_balance_wallet_rounded)),
+                Expanded(child: _SummaryCard(title: 'Barcha Foyda', value: '${NumberFormat.currency(locale: 'uz_UZ', symbol: '', decimalDigits: 0).format(history.fold<int>(0, (sum, item) => sum + item.amount))} so\'m', color: Colors.indigo, icon: Icons.account_balance_wallet_rounded)),
                 const SizedBox(width: 12),
                 Expanded(child: _SummaryCard(title: 'Faol Do\'konlar', value: activeSubs.toString(), color: Colors.teal, icon: Icons.store_mall_directory_rounded)),
               ],

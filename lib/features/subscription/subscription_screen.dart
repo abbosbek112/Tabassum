@@ -1,15 +1,11 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/twa_service.dart';
 
 import '../../core/shared_providers.dart';
 import '../../core/providers.dart';
-import '../subscription/subscription_repository.dart';
-import '../auth/models/user_model.dart';
 
 // ─── Config (o'zingiznikini kiriting) ───────────────────────────────────────
 const _adminCardNumber = '9860 0301 2070 9966'; // ← admin karta raqami

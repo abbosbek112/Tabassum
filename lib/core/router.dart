@@ -43,6 +43,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       final isLoggingIn = state.matchedLocation == '/auth';
 
       if (!authState.isAuthenticated) {
+        if (!isLoggingIn) {
+          final from = state.uri.toString();
+          if (from != '/' && from != '/market') {
+             return '/auth?from=${Uri.encodeQueryComponent(from)}';
+          }
+        }
         return isLoggingIn ? null : '/auth';
       }
 
@@ -54,10 +60,22 @@ final goRouterProvider = Provider<GoRouter>((ref) {
 
       // If authenticated but NO profile in Firestore, force them to /auth (registration)
       if (authState.isAuthenticated && !hasProfile) {
+        if (!isLoggingIn) {
+          final from = state.uri.toString();
+          if (from != '/' && from != '/market') {
+             return '/auth?from=${Uri.encodeQueryComponent(from)}';
+          }
+        }
         return isLoggingIn ? null : '/auth';
       }
 
-      if (isLoggingIn) return '/market';
+      if (isLoggingIn) {
+        final from = state.uri.queryParameters['from'];
+        if (from != null && from.isNotEmpty) {
+           return Uri.decodeQueryComponent(from);
+        }
+        return '/market';
+      }
 
       // Handle Telegram start_param deep linking right after auth is established
       if (!_hasHandledStartParam && authState.isAuthenticated && !userProfileAsync.isLoading) {

@@ -12,7 +12,6 @@ import '../../core/constants.dart';
 import '../../core/shared_providers.dart';
 import '../../shared/models/shop_model.dart';
 import '../marketplace/shop_repository.dart';
-import '../../core/twa_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../core/providers.dart';
 
@@ -802,8 +801,8 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                 final isActive = s != null &&
                     s.status == 'active' &&
                     s.endDate.isAfter(DateTime.now());
-                final daysLeft = isActive ? s!.endDate.difference(DateTime.now()).inDays : 0;
-                final totalDays = isActive ? s!.endDate.difference(s.startDate).inDays : 30;
+                final daysLeft = isActive ? s.endDate.difference(DateTime.now()).inDays : 0;
+                final totalDays = isActive ? s.endDate.difference(s.startDate).inDays : 30;
                 final progress = isActive ? (totalDays - daysLeft) / totalDays : 0.0;
 
                 return Material(
@@ -910,7 +909,7 @@ class _ProfileBodyState extends ConsumerState<_ProfileBody> {
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '${s!.startDate.day}.${s.startDate.month.toString().padLeft(2, '0')}.${s.startDate.year}',
+                                  '${s.startDate.day}.${s.startDate.month.toString().padLeft(2, '0')}.${s.startDate.year}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),

@@ -3,7 +3,19 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "tabassum-marketplace-9821c",
     "public": "build/web",
+    "headers": [
+      {
+        "source": "**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=3600"
+          }
+        ]
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

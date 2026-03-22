@@ -1342,7 +1342,7 @@ class _SalesHistoryTab extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(context.l("total_sales"), style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                        Text(context.l('total_sales'), style: const TextStyle(color: Colors.white70, fontSize: 12)),
                         const SizedBox(height: 4),
                         Text('$totalQty ${context.l("items") ?? "dona"}', style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900)),
                       ],

@@ -34,7 +34,8 @@ service cloud.firestore {
     
     // telegram_users collection
     match /telegram_users/{telegramId} {
-      allow read, write: if isAuthenticated(); // Simplified for now since auth flows read/write this. Future: strict mapping.
+      allow read: if isAuthenticated() && (resource == null || resource.data.uid == request.auth.uid || isAdmin());
+      allow write: if isAuthenticated() && request.resource.data.uid == request.auth.uid;
     }
 
     // shops collection

@@ -1062,7 +1062,7 @@ class _CreateShopCardState extends ConsumerState<_CreateShopCard> {
         TextField(controller: _name, decoration: const InputDecoration(labelText: 'Shop name')),
         const SizedBox(height: 12),
         DropdownButtonFormField<ShopGenre>(
-          value: _genre,
+          initialValue: _genre,
           items: ShopGenre.values.map((g) => DropdownMenuItem(
             value: g,
             child: Text(g.label),

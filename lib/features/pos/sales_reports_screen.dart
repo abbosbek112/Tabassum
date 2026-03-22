@@ -43,7 +43,7 @@ class _SalesReportsScreenState extends ConsumerState<SalesReportsScreen> {
     
     if (uid == null) {
       return Scaffold(
-        appBar: AppBar(title: Text(context.l('sales_reports') ?? "Sales Reports")),
+        appBar: AppBar(title: Text(context.l('sales_reports') ?? 'Sales Reports')),
         body: Center(child: Text(context.l('not_logged_in') ?? 'Please sign in.')),
       );
     }
@@ -55,7 +55,7 @@ class _SalesReportsScreenState extends ConsumerState<SalesReportsScreen> {
         leading: twa.isSupported ? const SizedBox.shrink() : null,
         title: Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Text(context.l('sales_reports') ?? "Sales Reports"),
+          child: Text(context.l('sales_reports') ?? 'Sales Reports'),
         ),
         actions: [
           shopsAsync.maybeWhen(

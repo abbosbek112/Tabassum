@@ -594,7 +594,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: dropdownValue,
+                        initialValue: dropdownValue,
                         decoration: InputDecoration(
                           labelText: context.l('categories') ?? 'Category',
                           border: InputBorder.none,
@@ -642,7 +642,7 @@ class _AddInventorySheetState extends ConsumerState<AddInventorySheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: DropdownButtonFormField<String>(
-        value: _selectedGender,
+        initialValue: _selectedGender,
         decoration: InputDecoration(
           labelText: 'Kimga mo\'ljallangan', 
           border: InputBorder.none, 
