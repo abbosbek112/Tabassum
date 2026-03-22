@@ -194,56 +194,69 @@ class CategoriesScreen extends ConsumerWidget {
 IconData _getIconForCategory(String name) {
   final lower = name.toLowerCase();
   
+  // Specific Uzbek/English keywords for unique icons
+  if (lower.contains('diniy') || lower.contains('islam') || lower.contains('religious')) return Icons.auto_awesome_rounded;
+  if (lower.contains('kitob') || lower.contains('book')) return Icons.menu_book_rounded;
+  if (lower.contains('xo\'jalik') || lower.contains('xojalik') || lower.contains('household') || lower.contains('ro\'zg\'or')) return Icons.home_repair_service_rounded;
+  if (lower.contains('salomatlik') || lower.contains('health') || lower.contains('medical')) return Icons.health_and_safety_rounded;
+  if (lower.contains('bog\'') || lower.contains('bog') || lower.contains('garden')) return Icons.yard_rounded;
+  if (lower.contains('mebel') || lower.contains('furniture') || lower.contains('stul') || lower.contains('stol')) return Icons.chair_rounded;
+  if (lower.contains('oziq') || lower.contains('ovqat') || lower.contains('food') || lower.contains('ichimlik')) return Icons.restaurant_rounded;
+  if (lower.contains('o\'yinchoq') || lower.contains('oyinchoq') || lower.contains('toy')) return Icons.smart_toy_rounded;
+  if (lower.contains('sport') || lower.contains('fitness') || lower.contains('mashg\'ulot')) return Icons.fitness_center_rounded;
+  if (lower.contains('avto') || lower.contains('car') || lower.contains('mashina')) return Icons.directions_car_filled_rounded;
+  if (lower.contains('ehtiyot') || lower.contains('spare') || lower.contains('qismlar')) return Icons.handyman_rounded;
+
   // Clothing & Fashion
-  if (lower.contains('men_clothes')) return Icons.man_rounded;
-  if (lower.contains('women_clothes')) return Icons.woman_rounded;
-  if (lower.contains('shoes')) return Icons.snowshoeing_rounded;
-  if (lower.contains('clothes')) return Icons.checkroom_rounded;
-  if (lower.contains('access')) return Icons.watch_outlined;
+  if (lower.contains('men_clothes') || lower.contains('erkaklar')) return Icons.man_rounded;
+  if (lower.contains('women_clothes') || lower.contains('ayollar')) return Icons.woman_rounded;
+  if (lower.contains('shoes') || lower.contains('oyoq') || lower.contains('poyabzal')) return Icons.straighten_rounded;
+  if (lower.contains('clothes') || lower.contains('kiyim')) return Icons.checkroom_rounded;
+  if (lower.contains('accessories') || lower.contains('aksessuar')) return Icons.watch_outlined;
   
   // Electronics
-  if (lower.contains('phones') || lower.contains('smartphone')) return Icons.smartphone_rounded;
-  if (lower.contains('laptops')) return Icons.laptop_mac_rounded;
-  if (lower.contains('electronics')) return Icons.devices_rounded;
+  if (lower.contains('phone') || lower.contains('telefon') || lower.contains('smartphone')) return Icons.smartphone_rounded;
+  if (lower.contains('laptop') || lower.contains('noutbuk') || lower.contains('kompyuter')) return Icons.laptop_mac_rounded;
+  if (lower.contains('headphone') || lower.contains('quloqchin')) return Icons.headphones_rounded;
+  if (lower.contains('electronics') || lower.contains('elektronika')) return Icons.memory_rounded;
   
   // Home & Beauty
-  if (lower.contains('home_garden') || lower.contains('home')) return Icons.home_work_rounded;
-  if (lower.contains('beauty')) return Icons.face_retouching_natural_rounded;
+  if (lower.contains('home_garden') || lower.contains('home') || lower.contains('uy')) return Icons.home_work_rounded;
+  if (lower.contains('beauty') || lower.contains('go\'zallik') || lower.contains('gozallik')) return Icons.spa_rounded;
   if (lower.contains('perfume_men')) return Icons.flare_rounded;
   if (lower.contains('perfume_women')) return Icons.brush_rounded;
-  if (lower.contains('perfume') || lower.contains('fragrance')) return Icons.auto_fix_high_rounded;
+  if (lower.contains('perfume') || lower.contains('atirlar') || lower.contains('fragrance')) return Icons.auto_fix_high_rounded;
   
-  // Kids & Hobbies
-  if (lower.contains('toys_kids') || lower.contains('kids')) return Icons.child_friendly_rounded;
-  if (lower.contains('educational_toys')) return Icons.psychology_rounded;
-  if (lower.contains('toys')) return Icons.toys_rounded;
+  // Kids & Education
+  if (lower.contains('educational') || lower.contains('rivojlantiruvchi') || lower.contains('ta\'lim')) return Icons.psychology_rounded;
+  if (lower.contains('kids') || lower.contains('bolalar')) return Icons.child_friendly_rounded;
   
   // Tech & Tools
-  if (lower.contains('spare_parts')) return Icons.construction_rounded;
-  if (lower.contains('car_acc') || lower.contains('auto_parts')) return Icons.directions_car_filled_rounded;
-  if (lower.contains('auto')) return Icons.settings_input_component_rounded;
-  if (lower.contains('power_tools')) return Icons.bolt_rounded;
-  if (lower.contains('hand_tools')) return Icons.hardware_rounded;
-  if (lower.contains('tools')) return Icons.build_rounded;
+  if (lower.contains('construction') || lower.contains('qurilish')) return Icons.construction_rounded;
+  if (lower.contains('tool') || lower.contains('asbob')) return Icons.build_rounded;
   
-  if (lower.contains('sport')) return Icons.sports_basketball_rounded;
-  
-  return Icons.category_rounded;
+  return Icons.grid_view_rounded;
 }
 
 Color _getCategoryColor(BuildContext context, String name) {
   final lower = name.toLowerCase();
-  final primary = Theme.of(context).colorScheme.primary;
-
-  if (lower.contains('clothes')) return Colors.blue;
-  if (lower.contains('elec') || lower.contains('phone')) return Colors.indigo;
-  if (lower.contains('home')) return Colors.green;
-  if (lower.contains('beauty') || lower.contains('perfume')) return Colors.pink;
-  if (lower.contains('kids') || lower.contains('toys')) return Colors.orange;
-  if (lower.contains('auto') || lower.contains('tool')) return Colors.blueGrey;
-  if (lower.contains('sport')) return Colors.red;
   
-  return primary;
+  if (lower.contains('clothes') || lower.contains('kiyim')) return Colors.blue;
+  if (lower.contains('elec') || lower.contains('phone') || lower.contains('telefon')) return Colors.indigo;
+  if (lower.contains('home') || lower.contains('uy')) return Colors.green;
+  if (lower.contains('beauty') || lower.contains('go\'zallik')) return Colors.pink;
+  if (lower.contains('perfume') || lower.contains('atirlar')) return Colors.deepPurple;
+  if (lower.contains('kids') || lower.contains('bolalar') || lower.contains('toys') || lower.contains('oyinchoq')) return Colors.orange;
+  if (lower.contains('auto') || lower.contains('avto')) return Colors.blueGrey;
+  if (lower.contains('tool') || lower.contains('asbob')) return Colors.grey;
+  if (lower.contains('sport')) return Colors.red;
+  if (lower.contains('diniy')) return Colors.amber;
+  if (lower.contains('kitob')) return Colors.brown;
+  if (lower.contains('xo\'jalik') || lower.contains('xojalik')) return Colors.teal;
+  if (lower.contains('oziq') || lower.contains('food')) return Colors.deepOrange;
+  if (lower.contains('mebel')) return Colors.brown;
+  
+  return Theme.of(context).colorScheme.primary;
 }
 
 class _PopularCategoryCard extends StatefulWidget {
