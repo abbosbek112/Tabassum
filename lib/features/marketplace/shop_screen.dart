@@ -824,18 +824,22 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
       pinned: true,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       elevation: 0,
-      leading: twa.isSupported 
-        ? const SizedBox.shrink() 
-        : Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
-                onPressed: () => context.pop(),
-              ),
-            ),
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: CircleAvatar(
+          backgroundColor: Theme.of(context).colorScheme.surface.withOpacity(0.7),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back, color: Theme.of(context).colorScheme.onSurface, size: 20),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/catalog');
+              }
+            },
           ),
+        ),
+      ),
       actions: [
         if (isOwner)
           Padding(
