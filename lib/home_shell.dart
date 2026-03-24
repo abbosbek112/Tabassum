@@ -56,6 +56,7 @@ class HomeShell extends ConsumerWidget {
 
     final screenWidth = MediaQuery.sizeOf(context).width;
     final isDesktop = screenWidth > 900;
+    final isTablet = screenWidth >= 600 && screenWidth <= 900;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -63,8 +64,17 @@ class HomeShell extends ConsumerWidget {
         children: [
           if (isDesktop)
             _DesktopSideBar(
+              destinations: destinations,
               activeIndex: selectedIndex,
               onIndexChanged: (i) => context.go(destinations[i].path),
+              compact: false,
+            ),
+          if (isTablet)
+            _DesktopSideBar(
+              destinations: destinations,
+              activeIndex: selectedIndex,
+              onIndexChanged: (i) => context.go(destinations[i].path),
+              compact: true,
             ),
           Expanded(
             child: Center(
@@ -82,8 +92,8 @@ class HomeShell extends ConsumerWidget {
                         child: LinearProgressIndicator(minHeight: 2),
                       ),
                       
-                    // Floating nav bar pinned to bottom (Mobile/Tablet only)
-                    if (!isDesktop && isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
+                    // Floating nav bar pinned to bottom (Mobile only)
+                    if (!isDesktop && !isTablet && isTopLevel && MediaQuery.of(context).viewInsets.bottom == 0)
                       Positioned(
                         left: 0,
                         right: 0,
@@ -121,12 +131,16 @@ class HomeShell extends ConsumerWidget {
 }
 
 class _DesktopSideBar extends StatelessWidget {
+  final List<_NavDest> destinations;
   final int activeIndex;
   final Function(int) onIndexChanged;
+  final bool compact;
 
   const _DesktopSideBar({
+    required this.destinations,
     required this.activeIndex,
     required this.onIndexChanged,
+    this.compact = false,
   });
 
   @override
@@ -136,7 +150,7 @@ class _DesktopSideBar extends StatelessWidget {
     final borderColor = Theme.of(context).dividerColor.withOpacity(isDark ? 0.08 : 0.05);
 
     return Container(
-      width: 280,
+      width: compact ? 72 : 280,
       decoration: BoxDecoration(
         color: surface,
         border: Border(right: BorderSide(color: borderColor, width: 1)),
@@ -144,11 +158,37 @@ class _DesktopSideBar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(32, 48, 24, 40),
-            child: Row(
-              children: [
-                Container(
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(32, 48, 24, 40),
+              child: Row(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
+                  ),
+                  const SizedBox(width: 16),
+                  const Text(
+                    'TABASSUM',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 48, 0, 32),
+              child: Center(
+                child: Container(
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
@@ -157,55 +197,33 @@ class _DesktopSideBar extends StatelessWidget {
                   ),
                   child: const Icon(Icons.shopping_bag_rounded, color: Colors.white, size: 22),
                 ),
-                const SizedBox(width: 16),
-                const Text(
-                  'TABASSUM',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 8),
-          _SidebarItem(
-            icon: Icons.storefront_rounded,
-            label: context.l('market') ?? 'Market',
-            isActive: activeIndex == 0,
-            onTap: () => onIndexChanged(0),
-          ),
-          _SidebarItem(
-            icon: Icons.inventory_2_rounded,
-            label: context.l('products') ?? 'Mahsulotlar',
-            isActive: activeIndex == 1,
-            onTap: () => onIndexChanged(1),
-          ),
-          _SidebarItem(
-            icon: Icons.category_rounded,
-            label: context.l('categories') ?? 'Kategoriyalar',
-            isActive: activeIndex == 2,
-            onTap: () => onIndexChanged(2),
-          ),
-          _SidebarItem(
-            icon: Icons.person_rounded,
-            label: context.l('profile') ?? 'Mening profilim',
-            isActive: activeIndex == 3,
-            onTap: () => onIndexChanged(3),
-          ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text(
-              '@tabassum_market_bot',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                letterSpacing: 0.5,
               ),
             ),
-          ),
+          const SizedBox(height: 8),
+          // Dynamic nav items from destinations
+          ...List.generate(destinations.length, (i) {
+            final d = destinations[i];
+            return _SidebarItem(
+              icon: d.icon,
+              label: d.label,
+              isActive: activeIndex == i,
+              onTap: () => onIndexChanged(i),
+              compact: compact,
+            );
+          }),
+          const Spacer(),
+          if (!compact)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                '@tabassum_market_bot',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -217,12 +235,14 @@ class _SidebarItem extends StatefulWidget {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final bool compact;
 
   const _SidebarItem({
     required this.icon,
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.compact = false,
   });
 
   @override
@@ -236,6 +256,41 @@ class _SidebarItemState extends State<_SidebarItem> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     
+    if (widget.compact) {
+      // Icon-only mode for tablet
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Tooltip(
+          message: widget.label,
+          child: MouseRegion(
+            onEnter: (_) => setState(() => _isHovered = true),
+            onExit: (_) => setState(() => _isHovered = false),
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: widget.onTap,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: widget.isActive 
+                    ? colorScheme.primary.withOpacity(0.12)
+                    : (_isHovered ? colorScheme.onSurface.withOpacity(0.06) : Colors.transparent),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  widget.icon,
+                  size: 24,
+                  color: widget.isActive 
+                    ? colorScheme.primary 
+                    : colorScheme.onSurfaceVariant.withOpacity(0.7),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: MouseRegion(
