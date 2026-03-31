@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -348,6 +349,7 @@ class _ShopSubscriptionCard extends ConsumerWidget {
       error: (e, _) => Text('Xato: $e'),
     );
   }
+
 
   void _showShopHistory(BuildContext context, WidgetRef ref, ShopModel shop) {
     showModalBottomSheet(
@@ -726,6 +728,46 @@ class _DashboardTab extends ConsumerWidget {
             ),
             const SizedBox(height: 12),
             _RevenueCard(title: 'Shu yil', amount: revenueYear, color: Colors.orange, isFullWidth: true),
+            const SizedBox(height: 24),
+            // --- REPAIR TOOL ---
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: cs.primary.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: cs.primary.withOpacity(0.1)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.build_circle_rounded, color: cs.primary, size: 20),
+                      const SizedBox(width: 8),
+                      const Text('Tizimni sozlash', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Agar obunasi bor do\'konlar yoki mahsulotlar Marketda ko\'rinmayotgan bo\'lsa, ushbu tugmani bosing.',
+                    style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.7)),
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _repairAllSubscriptionData(context, ref),
+                      icon: const Icon(Icons.auto_fix_high_rounded, size: 18),
+                      label: const Text('Barcha ma\'lumotlarni yangilash (Fix All)', style: TextStyle(fontWeight: FontWeight.w800)),
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 32),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -756,6 +798,76 @@ class _DashboardTab extends ConsumerWidget {
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
       builder: (ctx) => _AllHistorySheet(history: history),
     );
+  }
+
+  Future<void> _repairAllSubscriptionData(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ma\'lumotlarni tuzatish'),
+        content: const Text('Ushbu amal barcha do\'konlar va mahsulotlarning obuna holatini qayta tekshirib chiqadi. Bu bir necha soniya vaqt olishi mumkin.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Bekor qilish')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Davom etish')),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => const AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Expanded(child: Text('Ma\'lumotlar yangilanmoqda, iltimos kuting...')),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final db = ref.read(firestoreProvider);
+      
+      // Fetch active subscription shop IDs
+      final subSnap = await db.collection(FirestoreCollections.subscriptions).get();
+      final activeShopIds = <String>{};
+      final now = DateTime.now();
+
+      for (var doc in subSnap.docs) {
+        final data = doc.data();
+        if (data['status'] == 'active') {
+          activeShopIds.add(doc.id);
+        }
+      }
+
+      // Update ALL shops
+      final shopSnap = await db.collection(FirestoreCollections.shops).get();
+      final batch = db.batch();
+      for (var doc in shopSnap.docs) {
+        final isActive = activeShopIds.contains(doc.id);
+        batch.update(doc.reference, {'subscriptionActive': isActive});
+      }
+      await batch.commit();
+
+      if (context.mounted) {
+        Navigator.pop(context); // close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Tayyor!'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Xato: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 }
 

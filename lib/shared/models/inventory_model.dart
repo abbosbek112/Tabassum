@@ -4,9 +4,9 @@ class InventoryModel {
   final String id;
   final String shopId;
   final String name;
-  final String category; // Legacy, keep for backward compatibility or display
-  final String? categoryId; // The exact leaf-node category ID
-  final List<String> categoryIds; // All parent category IDs + leaf category ID for querying
+  final String category;
+  final String? categoryId;
+  final List<String> categoryIds;
   final String brand;
   final double rating;
   final int reviewCount;
@@ -18,9 +18,11 @@ class InventoryModel {
   final List<String> imageUrls;
   final DateTime createdAt;
   /// Whether the owning shop's subscription is active.
-  /// When false, this product is hidden from the public marketplace.
-  /// Set to true by default — existing products stay visible until subscription expires.
   final bool subscriptionActive;
+  /// Product lifecycle status: 'active', 'archived', or 'deleted'
+  final String status;
+  /// When the product was soft-deleted or archived
+  final DateTime? deletedAt;
 
   InventoryModel({
     required this.id,
@@ -39,8 +41,17 @@ class InventoryModel {
     required this.basePrice,
     required this.imageUrls,
     required this.createdAt,
-    this.subscriptionActive = true,
+    this.subscriptionActive = false, // Fail-closed: hidden by default unless verified
+    this.status = 'active',
+    this.deletedAt,
   });
+
+  bool get isActive => status == 'active';
+  bool get isDeleted => status == 'deleted';
+  bool get isArchived => status == 'archived';
+  /// Visible to public ONLY if shop has active subscription AND product is active
+  bool get isVisibleToPublic => status == 'active' && subscriptionActive;
+
 
   factory InventoryModel.fromMap(String id, Map<String, dynamic> map) {
     // Handle migration from single imageUrl to List<String> imageUrls
@@ -68,7 +79,9 @@ class InventoryModel {
       basePrice: _toInt(map['basePrice']),
       imageUrls: images,
       createdAt: _parseDate(map['createdAt']),
-      subscriptionActive: (map['subscriptionActive'] as bool?) ?? true,
+      subscriptionActive: (map['subscriptionActive'] as bool?) ?? false, // Fail-closed default
+      status: (map['status'] as String?) ?? 'active',
+      deletedAt: map['deletedAt'] != null ? _parseDate(map['deletedAt']) : null,
     );
   }
 
@@ -95,6 +108,8 @@ class InventoryModel {
         'imageUrls': imageUrls,
         'createdAt': createdAt,
         'subscriptionActive': subscriptionActive,
+        'status': status,
+        if (deletedAt != null) 'deletedAt': deletedAt,
       };
 
   InventoryModel copyWith({
@@ -115,6 +130,8 @@ class InventoryModel {
     List<String>? imageUrls,
     DateTime? createdAt,
     bool? subscriptionActive,
+    String? status,
+    DateTime? deletedAt,
   }) {
     return InventoryModel(
       id: id ?? this.id,
@@ -134,6 +151,8 @@ class InventoryModel {
       imageUrls: imageUrls ?? this.imageUrls,
       createdAt: createdAt ?? this.createdAt,
       subscriptionActive: subscriptionActive ?? this.subscriptionActive,
+      status: status ?? this.status,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
   }
 }

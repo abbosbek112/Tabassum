@@ -29,14 +29,15 @@ class InventoryRepository {
 
   /// --- INVENTORY METHODS ---
 
+  /// Public-facing: only active products from shops with active subscription.
   Stream<List<InventoryModel>> streamAllInventory() {
     return db
         .collection(FirestoreCollections.inventory)
-        .orderBy('createdAt', descending: true)
+        .where('status', isEqualTo: 'active')
+        .where('subscriptionActive', isEqualTo: true)
         .snapshots()
         .map((q) => q.docs
             .map((d) => InventoryModel.fromMap(d.id, d.data()))
-            .where((item) => item.subscriptionActive) // false olan yashiriladi
             .toList());
   }
 
@@ -46,10 +47,9 @@ class InventoryRepository {
     String? categoryId,
     String? shopId,
   }) async {
-    // Note: no orderBy here — combining arrayContains/equality + orderBy needs
-    // composite indexes. We sort on the Dart side instead.
     Query<Map<String, dynamic>> query = db
         .collection(FirestoreCollections.inventory)
+        .where('status', isEqualTo: 'active')
         .where('subscriptionActive', isEqualTo: true)
         .limit(limit);
 
@@ -67,15 +67,16 @@ class InventoryRepository {
     return query.get();
   }
 
-  /// Public-facing stream: only shows products from shops with active subscription.
+  /// Public-facing stream for a shop: only active products with active subscription.
   Stream<List<InventoryModel>> streamInventoryByShop(String shopId) {
     return db
         .collection(FirestoreCollections.inventory)
         .where('shopId', isEqualTo: shopId)
+        .where('status', isEqualTo: 'active')
+        .where('subscriptionActive', isEqualTo: true)
         .snapshots()
         .map((q) => q.docs
             .map((d) => InventoryModel.fromMap(d.id, d.data()))
-            .where((item) => item.subscriptionActive)
             .toList());
   }
 
@@ -100,10 +101,10 @@ class InventoryRepository {
     return db
         .collection(FirestoreCollections.inventory)
         .where('category', isEqualTo: category)
+        .where('status', isEqualTo: 'active')
         .snapshots()
         .map((q) => q.docs
             .map((d) => InventoryModel.fromMap(d.id, d.data()))
-            .where((item) => item.subscriptionActive)
             .toList());
   }
 
@@ -111,10 +112,10 @@ class InventoryRepository {
     return db
         .collection(FirestoreCollections.inventory)
         .where('categoryIds', arrayContains: categoryId)
+        .where('status', isEqualTo: 'active')
         .snapshots()
         .map((q) => q.docs
             .map((d) => InventoryModel.fromMap(d.id, d.data()))
-            .where((item) => item.subscriptionActive)
             .toList());
   }
 
@@ -147,9 +148,8 @@ class InventoryRepository {
         isActive = false;
       }
     } catch (e) {
-      // On error, default to true to avoid accidentally hiding items, 
-      // but in a production environment, you might want more strict handling.
-      isActive = true;
+      // Fail closed: if we can't verify subscription, DO NOT make it public
+      isActive = false;
     }
 
     final doc = db.collection(FirestoreCollections.inventory).doc();
@@ -167,10 +167,34 @@ class InventoryRepository {
         .set(inventory.toMap(), SetOptions(merge: true));
   }
 
+  /// Soft-delete: marks product as 'deleted' without removing data.
   Future<void> deleteInventory(String inventoryId) async {
+    await db.collection(FirestoreCollections.inventory).doc(inventoryId).update({
+      'status': 'deleted',
+      'deletedAt': DateTime.now(),
+    });
+  }
+
+  /// Archive: marks product as 'archived' (e.g., stock depleted).
+  Future<void> archiveInventory(String inventoryId) async {
+    await db.collection(FirestoreCollections.inventory).doc(inventoryId).update({
+      'status': 'archived',
+      'deletedAt': DateTime.now(),
+    });
+  }
+
+  /// Restore: brings a deleted/archived product back to active.
+  Future<void> restoreInventory(String inventoryId) async {
+    await db.collection(FirestoreCollections.inventory).doc(inventoryId).update({
+      'status': 'active',
+      'deletedAt': null,
+    });
+  }
+
+  /// Hard-delete: permanently removes product + variants + comments. Admin only.
+  Future<void> hardDeleteInventory(String inventoryId) async {
     final batch = db.batch();
     
-    // Get variants to delete
     final variants = await db
         .collection(FirestoreCollections.inventoryVariants)
         .where('inventoryId', isEqualTo: inventoryId)
@@ -180,7 +204,6 @@ class InventoryRepository {
       batch.delete(doc.reference);
     }
 
-    // Get comments to delete
     final comments = await db
         .collection(FirestoreCollections.productComments)
         .where('productId', isEqualTo: inventoryId)
@@ -190,10 +213,21 @@ class InventoryRepository {
       batch.delete(doc.reference);
     }
     
-    // Delete product
     batch.delete(db.collection(FirestoreCollections.inventory).doc(inventoryId));
     
     await batch.commit();
+  }
+
+  /// Stream deleted/archived products for the seller's archive tab.
+  Stream<List<InventoryModel>> streamDeletedInventory(String shopId) {
+    return db
+        .collection(FirestoreCollections.inventory)
+        .where('shopId', isEqualTo: shopId)
+        .where('status', whereIn: ['deleted', 'archived'])
+        .snapshots()
+        .map((q) => q.docs
+            .map((d) => InventoryModel.fromMap(d.id, d.data()))
+            .toList());
   }
 
   Future<String> uploadImageBytes({

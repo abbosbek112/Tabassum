@@ -17,9 +17,15 @@ final singleShopProvider = StreamProvider.family<ShopModel?, String>((ref, shopI
   return ref.watch(shopRepositoryProvider).streamShop(shopId);
 });
 
-/// Shared provider: stream inventory in [shopId] — OWNER view (all products, including hidden).
+/// Shared provider: stream inventory in [shopId] — OWNER view (active products only).
 final inventoryByShopProvider = StreamProvider.family<List<InventoryModel>, String>((ref, shopId) {
-  return ref.watch(inventoryRepositoryProvider).streamInventoryByShopOwner(shopId);
+  return ref.watch(inventoryRepositoryProvider).streamInventoryByShopOwner(shopId)
+      .map((list) => list.where((item) => item.isActive).toList());
+});
+
+/// Shared provider: stream deleted/archived inventory for seller archive tab.
+final deletedInventoryByShopProvider = StreamProvider.family<List<InventoryModel>, String>((ref, shopId) {
+  return ref.watch(inventoryRepositoryProvider).streamDeletedInventory(shopId);
 });
 
 /// Shared provider: single inventory stream by [inventoryId].
@@ -37,7 +43,7 @@ final shopSubscriptionProvider = StreamProvider.family<SubscriptionModel?, Strin
   return ref.watch(subscriptionRepositoryProvider).streamSubscription(shopId);
 });
 
-/// Shared provider: whether subscription is active for [shopId].
+/// Checks real-time if shop's subscription is active and not expired.
 final subscriptionActiveProvider = StreamProvider.family<bool, String>((ref, shopId) {
   return ref.watch(subscriptionRepositoryProvider).streamIsActive(shopId);
 });

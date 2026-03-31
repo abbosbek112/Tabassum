@@ -23,7 +23,10 @@ import 'shop_notifier.dart';
 import '../../shared/widgets/loading_widgets.dart';
 import '../../core/utils.dart';
 
-// Deleted shopsProvider - now using shopPaginationProvider
+// Recommended shops: active subscription + ranked by quality score
+final recommendedShopsProvider = FutureProvider<List<ShopModel>>((ref) {
+  return ref.watch(shopRepositoryProvider).fetchRecommendedShops(limit: 8);
+});
 
 class ShopScreen extends ConsumerStatefulWidget {
   const ShopScreen({super.key});
@@ -73,6 +76,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
   Widget build(BuildContext context) {
     final pagination = ref.watch(shopPaginationProvider);
     final shops = pagination.items;
+    // Top recommended shop for featured banner (only subscribed, high-quality)
+    final recShops = ref.watch(recommendedShopsProvider).valueOrNull ?? [];
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -148,8 +153,8 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // New Shops horizontal section
-                    _buildNewShopsSection(context, ref),
+                    // Recommended shops section
+                    _buildRecommendedSection(context, ref),
                     const SizedBox(height: 24),
                   ],
                 ),
@@ -185,8 +190,20 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                   ];
                 }
 
-                // Feature the first shop as a prominent banner if no search
-                final showFeatured = _searchQuery.isEmpty && _filterGenre == null && filtered.isNotEmpty;
+                // Featured banner: use TOP recommended shop (subscribed + high rating)
+                // Falls back to first filtered shop only if no recommended data yet
+                final featuredShop = recShops.isNotEmpty ? recShops.first : null;
+                final showFeatured = _searchQuery.isEmpty && _filterGenre == null && featuredShop != null;
+
+                // Sort list: active-subscription shops first (those in recShops set),
+                // then the rest ordered by rating desc
+                final recIds = recShops.map((s) => s.id).toSet();
+                filtered.sort((a, b) {
+                  final aRec = recIds.contains(a.id) ? 1 : 0;
+                  final bRec = recIds.contains(b.id) ? 1 : 0;
+                  if (aRec != bRec) return bRec - aRec; // subscribed first
+                  return b.rating.compareTo(a.rating);  // then by rating
+                });
 
                 return [
                   SliverPadding(
@@ -195,10 +212,11 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                       delegate: SliverChildBuilderDelegate(
                         (ctx, i) {
                           if (i < filtered.length) {
-                             if (showFeatured && i == 0) {
+                            // Show the TOP recommended shop as featured banner (index 0)
+                            if (showFeatured && i == 0) {
                               return Padding(
                                 padding: const EdgeInsets.only(bottom: 16),
-                                child: _FeaturedShopCard(shop: filtered[0]),
+                                child: _FeaturedShopCard(shop: featuredShop!),
                               );
                             }
                             final shop = filtered[i];
@@ -207,7 +225,6 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
                               child: _ShopCard(shop: shop),
                             );
                           } else {
-                            // Loading indicator at the bottom
                             return const Padding(
                               padding: EdgeInsets.symmetric(vertical: 32),
                               child: AppLoadingIndicator(size: 32),
@@ -227,90 +244,180 @@ class _ShopScreenState extends ConsumerState<ShopScreen> {
     );
   }
 
-  Widget _buildNewShopsSection(BuildContext context, WidgetRef ref) {
-    final shops = ref.watch(shopPaginationProvider).items;
-    if (shops.isEmpty) return const SizedBox.shrink();
-        final newShops = shops.length > 5 ? shops.sublist(0, 5) : shops;
+  Widget _buildRecommendedSection(BuildContext context, WidgetRef ref) {
+    final recAsync = ref.watch(recommendedShopsProvider);
 
+    return recAsync.when(
+      loading: () => const SizedBox(
+        height: 130,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      ),
+      error: (_, __) => const SizedBox.shrink(),
+      data: (shops) {
+        if (shops.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Icon(Icons.workspace_premium_rounded,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
                 Text(
-                  context.l('new_shops'),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
-                ),
-                TextButton(
-                  onPressed: () {},
-                  child: Text(context.l('see_all'), style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)),
+                  context.l('recommended') ?? 'Tavsiya etilgan',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 4),
+            Text(
+              context.l('recommended_desc') ?? 'Reyting va sifat asosida tanlangan',
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).textTheme.bodySmall?.color?.withOpacity(0.6),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 14),
             SizedBox(
-              height: 110,
+              height: 120,
               child: ListView.separated(
                 physics: const BouncingScrollPhysics(),
                 scrollDirection: Axis.horizontal,
-                itemCount: newShops.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 16),
+                itemCount: shops.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 14),
                 itemBuilder: (context, index) {
-                  final shop = newShops[index];
+                  final shop = shops[index];
                   return GestureDetector(
                     onTap: () => context.go('/market/shop/${shop.id}'),
-                          child: Column(
-                            children: [
-                              Container(
-                                width: 70,
-                                height: 70,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Theme.of(context).cardColor,
-                                  border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.1), width: 1),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05),
-                                      blurRadius: 15,
-                                      offset: const Offset(0, 6),
-                                    ),
-                                  ],
-                                  image: shop.image.isNotEmpty 
-                                      ? DecorationImage(image: CachedNetworkImageProvider(shop.image), fit: BoxFit.cover)
-                                      : null,
+                    child: Column(
+                      children: [
+                        Stack(
+                          children: [
+                            Container(
+                              width: 72,
+                              height: 72,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Theme.of(context).cardColor,
+                                border: Border.all(
+                                  color: index == 0
+                                      ? const Color(0xFFFFD700) // gold for #1
+                                      : index == 1
+                                          ? const Color(0xFFC0C0C0) // silver for #2
+                                          : index == 2
+                                              ? const Color(0xFFCD7F32) // bronze for #3
+                                              : Theme.of(context).dividerColor.withOpacity(0.15),
+                                  width: index < 3 ? 2.5 : 1,
                                 ),
-                                child: shop.image.isEmpty 
-                                    ? Icon(Icons.storefront_outlined, color: Theme.of(context).colorScheme.primary.withOpacity(0.7)) 
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(
+                                        Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.06),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                                image: shop.image.isNotEmpty
+                                    ? DecorationImage(
+                                        image: CachedNetworkImageProvider(shop.image),
+                                        fit: BoxFit.cover,
+                                      )
                                     : null,
                               ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: 80,
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      shop.name,
-                                      maxLines: 1,
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11, 
-                                        fontWeight: FontWeight.w700,
-                                        color: Theme.of(context).textTheme.bodyMedium?.color,
+                              child: shop.image.isEmpty
+                                  ? Icon(Icons.storefront_outlined,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.7))
+                                  : null,
+                            ),
+                            // Top 3 badge
+                            if (index < 3)
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    color: index == 0
+                                        ? const Color(0xFFFFD700)
+                                        : index == 1
+                                            ? const Color(0xFFC0C0C0)
+                                            : const Color(0xFFCD7F32),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Theme.of(context).scaffoldBackgroundColor,
+                                        width: 2),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
                                       ),
                                     ),
-                                  ],
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        SizedBox(
+                          width: 80,
+                          child: Text(
+                            shop.name,
+                            maxLines: 1,
+                            textAlign: TextAlign.center,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                            ),
+                          ),
+                        ),
+                        if (shop.rating > 0)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.star_rounded,
+                                  size: 11,
+                                  color: const Color(0xFFFFD700)),
+                              const SizedBox(width: 2),
+                              Text(
+                                shop.rating.toStringAsFixed(1),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Theme.of(context)
+                                      .textTheme
+                                      .bodySmall
+                                      ?.color
+                                      ?.withOpacity(0.7),
                                 ),
                               ),
                             ],
                           ),
+                      ],
+                    ),
                   );
                 },
               ),
             ),
           ],
         );
+      },
+    );
   }
 }
 
@@ -632,38 +739,12 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
         if (shop == null) return Scaffold(body: Center(child: Text(context.l('no_products_found'))));
         final isOwner = currentUser?.uid == shop.ownerId;
         
-        // Dynamic subscription check
-        final subscriptionActive = ref.watch(subscriptionActiveProvider(widget.shopId)).valueOrNull ?? false;
+        // Watch subscription as AsyncValue to distinguish loading from false
+        final subscriptionAsync = ref.watch(subscriptionActiveProvider(widget.shopId));
+        // While loading, assume true to avoid flash of locked screen
+        final subscriptionActive = subscriptionAsync.valueOrNull ?? true;
+        // Non-owner sees products only if subscription is active
         final hideProducts = !subscriptionActive && !isOwner;
-
-        if (hideProducts) {
-          return Scaffold(
-            appBar: AppBar(elevation: 0, backgroundColor: Colors.transparent),
-            body: Center(
-              child: Padding(
-                padding: const EdgeInsets.all(40.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.store_outlined, size: 80, color: Theme.of(context).colorScheme.primary.withOpacity(0.1)),
-                    const SizedBox(height: 24),
-                    Text(
-                      context.l('shop_not_found'),
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 24),
-                    TextButton.icon(
-                      onPressed: () => context.go('/market'),
-                      icon: const Icon(Icons.arrow_back),
-                      label: Text(context.l('go_shopping')),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        }
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -671,8 +752,100 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               _buildUltimateSliverAppBar(context, shop, isOwner, ref, twa),
-              if (false) // Removed lock screen UI
-                SliverToBoxAdapter(child: SizedBox.shrink())
+              
+              // ── Seller: obuna ogohlantirish banneri ─────────────────────
+              if (isOwner && !subscriptionActive)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6B35).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFFF6B35).withOpacity(0.4), width: 1.5),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF6B35).withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF6B35), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Obunangiz tugagan!',
+                                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFFFF6B35)),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Mahsulotlaringiz boshqa foydalanuvchilarga ko\'rinmayapti.',
+                                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () => context.push('/subscription'),
+                          style: TextButton.styleFrom(
+                            backgroundColor: const Color(0xFFFF6B35),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: const Text('Obuna', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+              // ── Visitor: obunasiz do'kon ko'rinishi ─────────────────────
+              if (hideProducts)
+                SliverFillRemaining(
+                  child: Padding(
+                    padding: const EdgeInsets.all(40),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.lock_outline_rounded,
+                            size: 48,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          'Bu do\'kon hozircha mavjud emas',
+                          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Do\'kon egalari yaqin orada qaytib keladi.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               else ...[
                 SliverToBoxAdapter(
                   child: Padding(
@@ -699,8 +872,6 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                     ),
                   ),
                 ),
-              ],
-              if (!hideProducts)
                 inventoryAsync.when(
                   data: (items) {
                   if (items.isEmpty) {
@@ -787,6 +958,7 @@ class _ShopDetailScreenState extends ConsumerState<ShopDetailScreen> {
                   ),
                 ),
               ),
+              ],
               const SliverToBoxAdapter(child: SizedBox(height: 140)),
             ],
           ),

@@ -238,25 +238,37 @@ IconData _getIconForCategory(String name) {
   return Icons.grid_view_rounded;
 }
 
+/// Returns a muted, theme-consistent accent color for each category.
+/// Uses a fixed palette of 8 carefully chosen colors that all work
+/// with both light (#0F172A base) and dark (#818CF8 base) themes.
 Color _getCategoryColor(BuildContext context, String name) {
+  final isDark = Theme.of(context).brightness == Brightness.dark;
   final lower = name.toLowerCase();
-  
-  if (lower.contains('clothes') || lower.contains('kiyim')) return Colors.blue;
-  if (lower.contains('elec') || lower.contains('phone') || lower.contains('telefon')) return Colors.indigo;
-  if (lower.contains('home') || lower.contains('uy')) return Colors.green;
-  if (lower.contains('beauty') || lower.contains('go\'zallik')) return Colors.pink;
-  if (lower.contains('perfume') || lower.contains('atirlar')) return Colors.deepPurple;
-  if (lower.contains('kids') || lower.contains('bolalar') || lower.contains('toys') || lower.contains('oyinchoq')) return Colors.orange;
-  if (lower.contains('auto') || lower.contains('avto')) return Colors.blueGrey;
-  if (lower.contains('tool') || lower.contains('asbob')) return Colors.grey;
-  if (lower.contains('sport')) return Colors.red;
-  if (lower.contains('diniy')) return Colors.amber;
-  if (lower.contains('kitob')) return Colors.brown;
-  if (lower.contains('xo\'jalik') || lower.contains('xojalik')) return Colors.teal;
-  if (lower.contains('oziq') || lower.contains('food')) return Colors.deepOrange;
-  if (lower.contains('mebel')) return Colors.brown;
-  
-  return Theme.of(context).colorScheme.primary;
+
+  // Palette: muted tones harmonious with slate/indigo primary
+  const colors = [
+    Color(0xFF6366F1), // indigo  – electronics, phones
+    Color(0xFF3B82F6), // blue    – clothes, fashion
+    Color(0xFF10B981), // emerald – home, garden
+    Color(0xFFF59E0B), // amber   – books, religious
+    Color(0xFF8B5CF6), // violet  – beauty, perfume
+    Color(0xFF64748B), // slate   – auto, tools
+    Color(0xFFEC4899), // pink    – kids, toys
+    Color(0xFF14B8A6), // teal    – household
+  ];
+
+  if (lower.contains('elec') || lower.contains('phone') || lower.contains('telefon') || lower.contains('laptop')) return colors[0];
+  if (lower.contains('clothes') || lower.contains('kiyim') || lower.contains('sport') || lower.contains('shoes') || lower.contains('poyabzal')) return colors[1];
+  if (lower.contains('home') || lower.contains('uy') || lower.contains('bog') || lower.contains('mebel')) return colors[2];
+  if (lower.contains('kitob') || lower.contains('book') || lower.contains('diniy') || lower.contains('ta\'lim') || lower.contains('educational')) return colors[3];
+  if (lower.contains('beauty') || lower.contains('go\'zallik') || lower.contains('perfume') || lower.contains('atir') || lower.contains('salomatlik')) return colors[4];
+  if (lower.contains('avto') || lower.contains('auto') || lower.contains('car') || lower.contains('ehtiyot') || lower.contains('tool') || lower.contains('asbob')) return colors[5];
+  if (lower.contains('kids') || lower.contains('bolalar') || lower.contains('oyinchoq') || lower.contains('toy')) return colors[6];
+  if (lower.contains('xo\'jalik') || lower.contains('xojalik') || lower.contains('oziq') || lower.contains('food')) return colors[7];
+
+  // Deterministic fallback: hash name to pick from palette
+  final hash = lower.codeUnits.fold(0, (a, b) => a + b);
+  return colors[hash % colors.length];
 }
 
 class _PopularCategoryCard extends StatefulWidget {
@@ -281,75 +293,69 @@ class _PopularCategoryCardState extends State<_PopularCategoryCard> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = _getCategoryColor(context, widget.name);
+    final surfaceColor = Theme.of(context).colorScheme.surface;
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final catColor = _getCategoryColor(context, widget.name);
-    final iconBg = catColor.withValues(alpha: widget.isDark ? 0.25 : 0.12);
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutBack,
-      transform: Matrix4.identity()..scale(_isHovered ? 1.08 : 1.0),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.05 : 1.0),
+      transformAlignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: _isHovered 
-            ? catColor.withValues(alpha: 0.5)
-            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.15 : 0.08),
-          width: 1.5,
+          color: _isHovered
+              ? accent.withOpacity(0.35)
+              : Theme.of(context).colorScheme.outline.withOpacity(isDark ? 0.12 : 0.07),
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: catColor.withValues(alpha: _isHovered ? 0.2 : 0.0),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: widget.isDark ? 0.25 : 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           onTap: widget.onTap,
-          onHover: (hovering) => setState(() => _isHovered = hovering),
+          onHover: (h) => setState(() => _isHovered = h),
           mouseCursor: SystemMouseCursors.click,
-          splashColor: catColor.withValues(alpha: 0.1),
+          splashColor: accent.withOpacity(0.08),
+          highlightColor: accent.withOpacity(0.04),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 42,
+                  height: 42,
                   decoration: BoxDecoration(
-                    color: iconBg,
+                    color: accent.withOpacity(isDark ? 0.18 : 0.10),
                     shape: BoxShape.circle,
-                    border: Border.all(
-                      color: catColor.withValues(alpha: 0.1),
-                      width: 1,
-                    ),
                   ),
                   child: Icon(
                     widget.icon,
-                    color: catColor.withValues(alpha: widget.isDark ? 0.9 : 0.8),
-                    size: 22,
+                    color: accent.withOpacity(isDark ? 1.0 : 0.85),
+                    size: 20,
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 8),
                 Text(
                   widget.name,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: onSurface.withOpacity(0.9),
-                    letterSpacing: -0.3,
+                    color: onSurface.withOpacity(0.85),
+                    letterSpacing: -0.2,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -385,98 +391,78 @@ class _RootCategoryCardState extends State<_RootCategoryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final surface = Theme.of(context).colorScheme.surface;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final accent = _getCategoryColor(context, widget.name);
+    final surfaceColor = Theme.of(context).colorScheme.surface;
     final onSurface = Theme.of(context).colorScheme.onSurface;
-    final catColor = _getCategoryColor(context, widget.name);
-    final iconBg = catColor.withValues(alpha: widget.isDark ? 0.25 : 0.1);
+    final outlineColor = Theme.of(context).colorScheme.outline;
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeOutBack,
-      transform: Matrix4.identity()..scale(_isHovered ? 1.04 : 1.0),
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOut,
+      transform: Matrix4.identity()..scale(_isHovered ? 1.03 : 1.0),
+      transformAlignment: Alignment.center,
       decoration: BoxDecoration(
-        color: surface,
-        borderRadius: BorderRadius.circular(28),
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: _isHovered 
-            ? catColor.withValues(alpha: 0.5)
-            : Theme.of(context).colorScheme.outline.withValues(alpha: widget.isDark ? 0.15 : 0.08),
-          width: 1.5,
+          color: _isHovered
+              ? accent.withOpacity(0.4)
+              : outlineColor.withOpacity(isDark ? 0.12 : 0.07),
+          width: 1,
         ),
         boxShadow: [
+          if (_isHovered)
+            BoxShadow(
+              color: accent.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           BoxShadow(
-            color: catColor.withValues(alpha: _isHovered ? 0.25 : 0.0),
-            blurRadius: 32,
-            offset: const Offset(0, 16),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: widget.isDark ? 0.25 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(24),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
-            onHover: (hovering) => setState(() => _isHovered = hovering),
+            onHover: (h) => setState(() => _isHovered = h),
             mouseCursor: SystemMouseCursors.click,
-            splashColor: catColor.withValues(alpha: 0.12),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    catColor.withValues(alpha: widget.isDark ? 0.05 : 0.02),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            splashColor: accent.withOpacity(0.08),
+            highlightColor: accent.withOpacity(0.04),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Container(
-                    width: 64,
-                    height: 64,
+                    width: 56,
+                    height: 56,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          catColor.withValues(alpha: widget.isDark ? 0.35 : 0.15),
-                          catColor.withValues(alpha: widget.isDark ? 0.15 : 0.08),
-                        ],
-                      ),
+                      color: accent.withOpacity(isDark ? 0.18 : 0.10),
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: catColor.withValues(alpha: 0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
                     ),
                     child: Icon(
                       widget.icon,
-                      color: catColor.withValues(alpha: widget.isDark ? 0.95 : 0.85),
-                      size: 32,
+                      color: accent.withOpacity(isDark ? 1.0 : 0.85),
+                      size: 28,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Text(
                     widget.name,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      color: onSurface,
-                      letterSpacing: -0.5,
-                      height: 1.1,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: onSurface.withOpacity(0.9),
+                      letterSpacing: -0.3,
+                      height: 1.2,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -490,3 +476,5 @@ class _RootCategoryCardState extends State<_RootCategoryCard> {
     );
   }
 }
+
+

@@ -63,6 +63,38 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ─── Inventory (Products) ────────────────────────────────────────────────
+    match /inventory/{inventoryId} {
+      allow read: if true;
+      allow create: if isSeller()
+        && ownsShop(request.resource.data.shopId)
+        && subscriptionActive(request.resource.data.shopId);
+      allow update: if isSeller()
+        && ownsShop(resource.data.shopId);
+      allow delete: if false;  // Only admin SDK (hard delete)
+    }
+
+    // ─── Inventory Variants ──────────────────────────────────────────────────
+    match /inventory_variants/{variantId} {
+      allow read: if true;
+      // Variant must belong to an inventory owned by the requesting seller
+      allow create: if isSeller()
+        && exists(/databases/$(database)/documents/inventory/$(request.resource.data.inventoryId))
+        && ownsShop(
+            get(/databases/$(database)/documents/inventory/$(request.resource.data.inventoryId)).data.shopId
+           );
+      allow update: if isSeller()
+        && exists(/databases/$(database)/documents/inventory/$(resource.data.inventoryId))
+        && ownsShop(
+            get(/databases/$(database)/documents/inventory/$(resource.data.inventoryId)).data.shopId
+           );
+      allow delete: if isSeller()
+        && exists(/databases/$(database)/documents/inventory/$(resource.data.inventoryId))
+        && ownsShop(
+            get(/databases/$(database)/documents/inventory/$(resource.data.inventoryId)).data.shopId
+           );
+    }
+
     // ─── Wishlist ────────────────────────────────────────────────────────────
     match /wishlist/{wishlistId} {
       allow read: if signedIn() && resource.data.userId == uid();

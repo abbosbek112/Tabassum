@@ -129,6 +129,9 @@ class SubscriptionRepository {
       SetOptions(merge: true),
     );
 
+    // 1.5 Sync Shop Visibility
+    batch.update(db.collection(FirestoreCollections.shops).doc(shopId), {'subscriptionActive': true});
+
     // 2. Add History Record
     batch.set(
       db.collection(FirestoreCollections.subscriptionHistory).doc(),
@@ -151,11 +154,19 @@ class SubscriptionRepository {
 
   /// Expires subscription and hides all shop inventory from the marketplace.
   Future<void> expire(String shopId) async {
+    final batch = db.batch();
+
     // 1. Update subscription document
-    await db.collection(FirestoreCollections.subscriptions).doc(shopId).set(
+    batch.set(
+      db.collection(FirestoreCollections.subscriptions).doc(shopId),
       {'status': 'inactive', 'endDate': DateTime.now()},
       SetOptions(merge: true),
     );
+
+    // 1.5 Update shop document visibility
+    batch.update(db.collection(FirestoreCollections.shops).doc(shopId), {'subscriptionActive': false});
+
+    await batch.commit();
 
     // 2. Cascade: mark all inventory of this shop as inactive
     await _updateInventorySubscriptionStatus(shopId, active: false);
@@ -170,17 +181,23 @@ class SubscriptionRepository {
     return query.snapshots().map((q) => q.docs.map((d) => SubscriptionHistoryModel.fromMap(d.id, d.data() as Map<String, dynamic>)).toList());
   }
 
-  /// Batch-updates `subscriptionActive` on all inventory documents for [shopId].
+  /// Batch-updates `subscriptionActive` on inventory documents for [shopId].
+  /// When activating: only updates `status == 'active'` products (don't resurrect deleted/archived).
+  /// When deactivating: updates ALL products regardless of status.
   Future<void> _updateInventorySubscriptionStatus(String shopId, {required bool active}) async {
-    const batchSize = 400; // Firestore batch limit is 500
+    const batchSize = 400;
     QuerySnapshot<Map<String, dynamic>> snapshot;
     DocumentSnapshot? lastDoc;
 
     do {
       Query<Map<String, dynamic>> query = db
           .collection(FirestoreCollections.inventory)
-          .where('shopId', isEqualTo: shopId)
-          .limit(batchSize);
+          .where('shopId', isEqualTo: shopId);
+
+      // We update ALL inventory items of the shop (active, archived, or missing status)
+      // to ensure consistency between shop state and product state.
+
+      query = query.limit(batchSize);
 
       if (lastDoc != null) query = query.startAfterDocument(lastDoc);
 

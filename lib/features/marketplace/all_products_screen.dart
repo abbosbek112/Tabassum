@@ -32,7 +32,6 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
   String? _selectedCategory;
   ProductSort _sort = ProductSort.newest;
   String? _selectedGender;
-  final Set<String> _orphanIds = {};
 
   @override
   void initState() {
@@ -104,7 +103,10 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
             height: 44,
             child: categoriesAsync.when(
               data: (categories) {
-                final displayCats = ['all', ...categories.map((c) => c.name)];
+                final displayCats = [
+                  null, // Representing 'all'
+                  ...categories
+                ];
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   scrollDirection: Axis.horizontal,
@@ -112,12 +114,11 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     final cat = displayCats[index];
-                    final isSelected = (_selectedCategory == cat) ||
-                        (_selectedCategory == null && cat == 'all');
+                    final isSelected = _selectedCategory == (cat?.id);
 
                     return InkWell(
                       onTap: () {
-                        setState(() => _selectedCategory = cat == 'all' ? null : cat);
+                        setState(() => _selectedCategory = cat?.id);
                       },
                       borderRadius: BorderRadius.circular(14),
                       child: Container(
@@ -135,7 +136,7 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          context.l(cat) ?? cat,
+                          cat == null ? (context.l('all') ?? 'All') : (context.l(cat.name) ?? cat.name),
                           style: TextStyle(
                             color: isSelected ? Colors.white : Theme.of(context).textTheme.bodyMedium?.color,
                             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
@@ -162,10 +163,19 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                 final items = state.items;
                 
                 var filtered = items
-                    .where((i) => i.subscriptionActive)
                     .where((i) => i.name.toLowerCase().contains(_searchQuery))
-                    .where((i) => !_orphanIds.contains(i.id))
                     .toList();
+                
+                // Safe Sorting
+                filtered.sort((a, b) {
+                  if (_sort == ProductSort.newest) {
+                    return b.createdAt.compareTo(a.createdAt);
+                  } else if (_sort == ProductSort.priceLowHigh) {
+                    return a.basePrice.compareTo(b.basePrice);
+                  } else {
+                    return b.basePrice.compareTo(a.basePrice);
+                  }
+                });
 
                 if (_selectedGender != null) {
                    filtered = filtered
@@ -174,18 +184,16 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                       .toList();
                 }
 
-                // Sorting
-                switch (_sort) {
-                  case ProductSort.newest:
-                    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-                    break;
-                  case ProductSort.priceLowHigh:
-                    filtered.sort((a, b) => a.basePrice.compareTo(b.basePrice));
-                    break;
-                  case ProductSort.priceHighLow:
-                    filtered.sort((a, b) => b.basePrice.compareTo(a.basePrice));
-                    break;
-                }
+                // Safe Sorting
+                filtered.sort((a, b) {
+                  if (_sort == ProductSort.newest) {
+                    return b.createdAt.compareTo(a.createdAt);
+                  } else if (_sort == ProductSort.priceLowHigh) {
+                    return a.basePrice.compareTo(b.basePrice);
+                  } else {
+                    return b.basePrice.compareTo(a.basePrice);
+                  }
+                });
 
                 if (filtered.isEmpty && !state.isLoading) {
                   return Center(
@@ -218,13 +226,6 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
                         itemBuilder: (context, index) {
                           return _ProductCard(
                             item: filtered[index],
-                            onOrphan: (id) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted && !_orphanIds.contains(id)) {
-                                  setState(() => _orphanIds.add(id));
-                                }
-                              });
-                            },
                           );
                         },
                       ),
@@ -388,8 +389,7 @@ class _AllProductsScreenState extends ConsumerState<AllProductsScreen> {
 
 class _ProductCard extends ConsumerStatefulWidget {
   final InventoryModel item;
-  final Function(String) onOrphan;
-  const _ProductCard({required this.item, required this.onOrphan});
+  const _ProductCard({required this.item});
 
   @override
   ConsumerState<_ProductCard> createState() => _ProductCardState();
@@ -409,8 +409,7 @@ class _ProductCardState extends ConsumerState<_ProductCard> {
     return shopAsync.when(
       data: (shop) {
         if (shop == null) {
-          widget.onOrphan(item.id);
-          return const SizedBox.shrink();
+          return const SizedBox.shrink(); // Still shrink if truly missing, but we removed the permanent orphan logic
         }
         
         return InkWell(

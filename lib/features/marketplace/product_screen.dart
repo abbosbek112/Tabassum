@@ -64,6 +64,41 @@ class ProductScreen extends ConsumerWidget {
             body: Center(child: Text(context.l('no_products_found'))),
           );
         }
+        // Guard: hide deleted/archived or subscription-inactive products
+        if (!inv.isVisibleToPublic) {
+          return Scaffold(
+            appBar: AppBar(title: Text(context.l('about_product'))),
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.visibility_off_rounded, size: 64, color: Theme.of(context).colorScheme.outline),
+                    const SizedBox(height: 16),
+                    Text(
+                      context.l('product_unavailable') ?? 'Mahsulot vaqtincha mavjud emas',
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      context.l('product_unavailable_desc') ?? 'Bu mahsulot o\'chirilgan yoki do\'kon obunasi tugagan.',
+                      style: Theme.of(context).textTheme.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/market'),
+                      icon: const Icon(Icons.storefront_rounded),
+                      label: Text(context.l('market') ?? 'Bozorga qaytish'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
         return _InventoryBody(inventory: inv);
       },
     );
@@ -340,7 +375,7 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
     return Positioned(
       top: 0, left: 0, right: 0,
       child: Container(
-        height: 110, // Increased height for TWA
+        height: 110,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -371,16 +406,24 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
                   child: _CircleNavButton(
                     icon: Icons.share_outlined,
                     onTap: () async {
-                    final botUsername = 'tabassum_market_bot';
-                    final telegramUrl = 'https://t.me/$botUsername?startapp=product_${widget.inventory.id}';
-                    final text = Uri.encodeComponent('Men ajoyib mahsulot topdim! 😎\nKo\'rib chiqing:');
-                    
-                    final shareUrl = Uri.parse('https://t.me/share/url?url=$telegramUrl&text=$text');
-                    
-                    try {
-                      if (await canLaunchUrl(shareUrl)) {
-                        await launchUrl(shareUrl, mode: LaunchMode.externalApplication);
-                      } else {
+                      final botUsername = 'tabassum_market_bot';
+                      final telegramUrl = 'https://t.me/$botUsername?startapp=product_${widget.inventory.id}';
+                      final text = Uri.encodeComponent('Men ajoyib mahsulot topdim! 😎\nKo\'rib chiqing:');
+
+                      final shareUrl = Uri.parse('https://t.me/share/url?url=$telegramUrl&text=$text');
+
+                      try {
+                        if (await canLaunchUrl(shareUrl)) {
+                          await launchUrl(shareUrl, mode: LaunchMode.externalApplication);
+                        } else {
+                          Clipboard.setData(ClipboardData(text: telegramUrl));
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Havola nusxalandi!'), behavior: SnackBarBehavior.floating),
+                            );
+                          }
+                        }
+                      } catch (e) {
                         Clipboard.setData(ClipboardData(text: telegramUrl));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -388,18 +431,10 @@ class _InventoryBodyState extends ConsumerState<_InventoryBody> {
                           );
                         }
                       }
-                    } catch (e) {
-                      Clipboard.setData(ClipboardData(text: telegramUrl));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Havola nusxalandi!'), behavior: SnackBarBehavior.floating),
-                        );
-                      }
-                    }
-                  },
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
             ),
           ),
         ),

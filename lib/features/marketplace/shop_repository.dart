@@ -46,6 +46,41 @@ class ShopRepository {
     return query.get();
   }
 
+  /// Fetches top recommended shops: only active-subscription shops,
+  /// ranked by quality score = rating × log(reviewCount + 1).
+  Future<List<ShopModel>> fetchRecommendedShops({int limit = 8}) async {
+    // Step 1: Get all currently active subscription shopIds
+    final now = Timestamp.now();
+    final subsSnap = await db
+        .collection(FirestoreCollections.subscriptions)
+        .where('status', isEqualTo: 'active')
+        .where('endDate', isGreaterThan: now)
+        .get();
+
+    final activeShopIds = subsSnap.docs.map((d) => d.id).toSet();
+    if (activeShopIds.isEmpty) return [];
+
+    // Step 2: Fetch shops with good ratings (Firestore max 100 for scoring)
+    final shopsSnap = await db
+        .collection(FirestoreCollections.shops)
+        .where(FieldPath.documentId, whereIn: activeShopIds.take(30).toList())
+        .get();
+
+    final shops = shopsSnap.docs
+        .map((d) => ShopModel.fromMap(d.id, d.data()))
+        .toList();
+
+    // Step 3: Score and sort: rating × log(reviewCount + 1)
+    // This rewards both high rating AND volume of reviews
+    shops.sort((a, b) {
+      final scoreA = a.rating * (a.reviewCount + 1).toDouble();
+      final scoreB = b.rating * (b.reviewCount + 1).toDouble();
+      return scoreB.compareTo(scoreA);
+    });
+
+    return shops.take(limit).toList();
+  }
+
   Stream<List<ShopModel>> streamShopsByOwner(String ownerId) {
     return db
         .collection(FirestoreCollections.shops)

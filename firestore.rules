@@ -17,6 +17,14 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == ownerId;
     }
 
+    // Effective subscription is evaluated at request time using endDate.
+    // This fixes cases where inventory.subscriptionActive is stale.
+    function isSubscriptionEffectiveActive(shopId) {
+      return exists(/databases/$(database)/documents/subscriptions/$(shopId)) &&
+        get(/databases/$(database)/documents/subscriptions/$(shopId)).data.status == 'active' &&
+        get(/databases/$(database)/documents/subscriptions/$(shopId)).data.endDate > request.time;
+    }
+
     // users collection
     // Read: Self or Admin
     // Write: Self (only subset of fields) or Admin
@@ -55,7 +63,12 @@ service cloud.firestore {
     // Write: Shop Owner or Admin. 
     // Since inventory doesn't store ownerId (only shopId), we have to lookup the shop.
     match /inventory/{inventoryId} {
-      allow read: if true;
+      allow read: if
+        // Owner/admin can always read their inventory.
+        (isAuthenticated() && (isAdmin() ||
+          get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid))
+        // Everyone else: only if subscription is effectively active.
+        || isSubscriptionEffectiveActive(resource.data.shopId);
       // Allow create if the user is the owner of the shop specified in the request
       allow create: if isAuthenticated() && get(/databases/$(database)/documents/shops/$(request.resource.data.shopId)).data.ownerId == request.auth.uid;
       // Allow update/delete if the user is the owner of the shop specified in the existing resource
@@ -81,7 +94,9 @@ service cloud.firestore {
     
     // subscriptions & subscription_history
     match /subscriptions/{shopId} {
-      allow read: if isAdmin() || isOwner(shopId); // simplified assumption: shopId == ownerId or shop owner. 
+      // Read is required for inventory rules to evaluate endDate/status.
+      // Write is still restricted to admins.
+      allow read: if true;
       allow write: if isAdmin(); // Only admins/backend can alter subscriptions.
     }
     match /subscription_history/{recordId} {
@@ -148,7 +163,8 @@ service cloud.firestore {
     match /sales/{saleId} {
       // Read: only shop owner/admin for this shop's sales.
       allow read: if isAuthenticated()
-        && (isAdmin() || (resource.data.ownerId == request.auth.uid));
+        && (isAdmin() || (exists(/databases/$(database)/documents/shops/$(resource.data.shopId))
+          && get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid));
 
       // Create: shop owner/admin can create sales for their shop.
       allow create: if isAuthenticated()

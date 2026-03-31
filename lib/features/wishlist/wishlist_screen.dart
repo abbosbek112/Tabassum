@@ -78,6 +78,14 @@ class WishlistScreen extends ConsumerWidget {
                     );
                   }
 
+                  // Ghost filter: show unavailable badge if not visible
+                  if (!inv.isVisibleToPublic) {
+                    return _UnavailableItem(
+                      name: inv.name,
+                      onRemove: () => _toggle(ref, w),
+                    );
+                  }
+
                   return Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     decoration: BoxDecoration(
@@ -285,3 +293,69 @@ class _ErrorItem extends StatelessWidget {
 final _myWishlistProvider = StreamProvider<List<WishlistItem>>((ref) {
   return ref.watch(wishlistRepositoryProvider).streamMyWishlist();
 });
+
+class _UnavailableItem extends StatelessWidget {
+  final String name;
+  final VoidCallback onRemove;
+
+  const _UnavailableItem({required this.name, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 72, height: 72,
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.visibility_off_rounded, color: Colors.orange),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                    decoration: TextDecoration.lineThrough,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Vaqtincha mavjud emas',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.orange.shade700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onRemove,
+            icon: Icon(
+              Icons.delete_outline,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

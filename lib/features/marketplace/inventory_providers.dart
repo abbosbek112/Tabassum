@@ -63,9 +63,10 @@ class PaginatedInventoryNotifier extends StateNotifier<PaginatedInventoryState> 
 
       final newItems = snapshot.docs
           .map((d) => InventoryModel.fromMap(d.id, d.data()))
-          .where((item) => item.subscriptionActive) // false olan yashiriladi
-          .toList()
-        ..sort((a, b) => b.createdAt.compareTo(a.createdAt)); // newest first
+          .toList();
+      
+      // Sort client-side safely
+      newItems.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       state = state.copyWith(
         items: [...state.items, ...newItems],

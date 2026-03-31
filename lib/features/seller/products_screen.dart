@@ -51,132 +51,332 @@ class _ProductsBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFCFCFD),
+        appBar: AppBar(
+          title: Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(context.l('inventory') ?? 'Inventory', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
+          ),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          elevation: 0,
+          surfaceTintColor: Colors.transparent,
+          bottom: TabBar(
+            indicatorColor: Theme.of(context).colorScheme.primary,
+            labelColor: Theme.of(context).colorScheme.primary,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            tabs: [
+              Tab(text: context.l('active_products') ?? 'Faol'),
+              Tab(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.archive_outlined, size: 18),
+                    const SizedBox(width: 6),
+                    Text(context.l('archive') ?? 'Arxiv'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        floatingActionButton: Padding(
+          padding: const EdgeInsets.only(bottom: 110),
+          child: FloatingActionButton.extended(
+            onPressed: subscriptionActive
+                ? () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      useRootNavigator: true,
+                      builder: (_) => AddInventorySheet(shop: shop),
+                    )
+                : null,
+            label: Text(subscriptionActive ? (context.l('add_inventory') ?? 'Add inventory') : (context.l('subscription_required') ?? 'Subscription required')),
+            icon: const Icon(Icons.add),
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _ActiveProductsTab(shop: shop, subscriptionActive: subscriptionActive),
+            _ArchiveTab(shop: shop),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActiveProductsTab extends ConsumerWidget {
+  final ShopModel shop;
+  final bool subscriptionActive;
+
+  const _ActiveProductsTab({required this.shop, required this.subscriptionActive});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final inventoryAsync = ref.watch(inventoryByShopProvider(shop.id));
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFCFCFD),
-      appBar: AppBar(
-        title: Padding(
-          padding: const EdgeInsets.only(top: 8),
-          child: Text(context.l('inventory') ?? 'Inventory', style: const TextStyle(fontWeight: FontWeight.w800, letterSpacing: -1.0)),
-        ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        elevation: 0,
-        surfaceTintColor: Colors.transparent,
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 110),
-        child: FloatingActionButton.extended(
-          onPressed: subscriptionActive
-              ? () => showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    useRootNavigator: true,
-                    builder: (_) => AddInventorySheet(shop: shop),
-                  )
-              : null,
-          label: Text(subscriptionActive ? (context.l('add_inventory') ?? 'Add inventory') : (context.l('subscription_required') ?? 'Subscription required')),
-          icon: const Icon(Icons.add),
-        ),
-      ),
-      body: Column(
-        children: [
-          if (!subscriptionActive)
-            Container(
-              width: double.infinity,
-              margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF6B6B), Color(0xFFFF4D4D)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+    return Column(
+      children: [
+        if (!subscriptionActive)
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF6B6B), Color(0xFFFF4D4D)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF4D4D).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
-                borderRadius: BorderRadius.circular(18),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFFF4D4D).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+              ],
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.visibility_off_rounded, color: Colors.white, size: 22),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Mahsulotlaringiz ko\'rinmaydi',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        'Xaridorlarga ko\'rinishi uchun obuna oling',
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ],
                   ),
-                ],
+                ),
+                TextButton(
+                  onPressed: () => context.push('/seller/subscription'),
+                  style: TextButton.styleFrom(
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Obuna', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
+        Expanded(
+          child: inventoryAsync.when(
+            data: (inventoryItems) {
+              if (inventoryItems.isEmpty) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.inbox_outlined, size: 48, color: Color(0xFFC7C7CC)),
+                      const SizedBox(height: 16),
+                      Text(
+                        context.l('no_products_found') ?? 'No inventory added yet',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: const Color(0xFF8E8E93),
+                              fontWeight: FontWeight.w500,
+                            ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              final isWide = MediaQuery.sizeOf(context).width > 700;
+              return GridView.builder(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
+                itemCount: inventoryItems.length,
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: isWide ? 2 : 1,
+                  mainAxisExtent: isWide ? 220 : 180,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                ),
+                itemBuilder: (context, idx) {
+                  final inv = inventoryItems[idx];
+                  return _InventoryCard(inv: inv);
+                },
+              );
+            },
+            error: (e, _) => Center(child: Text('${context.l("error") ?? "Error"}: $e')),
+            loading: () => const Center(child: CircularProgressIndicator()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ArchiveTab extends ConsumerWidget {
+  final ShopModel shop;
+  const _ArchiveTab({required this.shop});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final deletedAsync = ref.watch(deletedInventoryByShopProvider(shop.id));
+    final repo = ref.watch(inventoryRepositoryProvider);
+
+    return deletedAsync.when(
+      data: (items) {
+        if (items.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.archive_outlined, size: 56, color: Theme.of(context).colorScheme.outline.withOpacity(0.4)),
+                const SizedBox(height: 16),
+                Text(
+                  context.l('archive_empty') ?? 'Arxiv bo\'sh',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'O\'chirilgan mahsulotlar shu yerda ko\'rinadi',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 160),
+          itemCount: items.length,
+          itemBuilder: (context, idx) {
+            final inv = items[idx];
+            return Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).cardColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: inv.isDeleted
+                      ? Colors.red.withOpacity(0.15)
+                      : Colors.orange.withOpacity(0.15),
+                ),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.visibility_off_rounded, color: Colors.white, size: 22),
+                  // Thumbnail
+                  Container(
+                    width: 60, height: 60,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: inv.imageUrls.isNotEmpty
+                          ? Image.network(inv.imageUrls.first, fit: BoxFit.cover)
+                          : Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.outline),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
-                          'Mahsulotlaringiz ko\'rinmaydi',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                          inv.name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                            decoration: TextDecoration.lineThrough,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        SizedBox(height: 2),
-                        Text(
-                          'Xaridorlarga ko\'rinishi uchun obuna oling',
-                          style: TextStyle(color: Colors.white70, fontSize: 11),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: inv.isDeleted ? Colors.red.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            inv.isDeleted ? 'O\'chirilgan' : 'Arxivlangan',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: inv.isDeleted ? Colors.red : Colors.orange.shade700,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  TextButton(
-                    onPressed: () => context.push('/seller/subscription'),
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    child: const Text('Obuna', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  // Restore button
+                  IconButton(
+                    onPressed: () async {
+                      await repo.restoreInventory(inv.id);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('${inv.name} qayta tiklandi')),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.restore_rounded, color: Colors.green),
+                    tooltip: 'Qayta tiklash',
+                  ),
+                  // Hard delete
+                  IconButton(
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Butunlay o\'chirish'),
+                          content: Text('\"${inv.name}\" butunlay o\'chiriladi va qaytarib bo\'lmaydi.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Bekor qilish')),
+                            FilledButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: FilledButton.styleFrom(backgroundColor: Colors.red),
+                              child: const Text('O\'chirish'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        await repo.hardDeleteInventory(inv.id);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('${inv.name} butunlay o\'chirildi')),
+                          );
+                        }
+                      }
+                    },
+                    icon: Icon(Icons.delete_forever_rounded, color: Colors.red.shade400),
+                    tooltip: 'Butunlay o\'chirish',
                   ),
                 ],
               ),
-            ),
-          Expanded(
-            child: inventoryAsync.when(
-              data: (inventoryItems) {
-                if (inventoryItems.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.inbox_outlined, size: 48, color: Color(0xFFC7C7CC)),
-                        const SizedBox(height: 16),
-                        Text(
-                          context.l('no_products_found') ?? 'No inventory added yet',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                color: const Color(0xFF8E8E93),
-                                fontWeight: FontWeight.w500,
-                              ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                final isWide = MediaQuery.sizeOf(context).width > 700;
-                return GridView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 160),
-                  itemCount: inventoryItems.length,
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: isWide ? 2 : 1,
-                    mainAxisExtent: isWide ? 220 : 180,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                  ),
-                  itemBuilder: (context, idx) {
-                    final inv = inventoryItems[idx];
-                    return _InventoryCard(inv: inv);
-                  },
-                );
-              },
-              error: (e, _) => Center(child: Text('${context.l("error") ?? "Error"}: $e')),
-              loading: () => const Center(child: CircularProgressIndicator()),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
+      error: (e, _) => Center(child: Text('${context.l("error") ?? "Error"}: $e')),
+      loading: () => const Center(child: CircularProgressIndicator()),
     );
   }
 }
